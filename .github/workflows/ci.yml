@@ -10,6 +10,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Force UTF-8 stdio so Rich-rendered output (box drawing, bullets) does
+  # not blow up on Windows runners where the default code page is cp1252.
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+
 jobs:
   test:
     name: ${{ matrix.os }} / py${{ matrix.python-version }}

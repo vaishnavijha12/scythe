@@ -1,4 +1,5 @@
 .venv
 logs
 scythe.egg-info
+scythe_cli.egg-info
 build
