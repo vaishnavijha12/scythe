@@ -7,19 +7,20 @@ from rich.panel import Panel
 from rich.text import Text
 from rich import box
 
+from scythe import __version__
+
 console = Console()
 
-BANNER = """
-   ____            __  __       
-  / __/____  ___  / /_/ /  ___  
- _\ \/ __/ |/ / |/ / / _ \/ -_) 
-/___/\__/|___/|___/_/_//_/\__/  
+BANNER = r"""
+   ____            __  __
+  / __/____  ___  / /_/ /  ___
+ _\ \/ __/ |/ / |/ / / _ \/ -_)
+/___/\__/|___/|___/_/_//_/\__/
 
 Build Artifact Cleaner"""
 
 
-
-VERSION = "0.3.0"
+VERSION = __version__
 
 
 def display_banner(show_version: bool = True):
