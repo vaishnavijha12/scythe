@@ -65,6 +65,31 @@
 `scythe scan /project_path --output report_file` this command will generate a report after the scan complete. Notice that the report file support only two types : **csv** and **json**
 - Release v0.3.0
 
+## [0.5.1] - 2026-05-01
+
+### Changed
+- **PyPI distribution renamed** to `artifact-scythe` (the name `scythe` is taken
+  on PyPI). The Python module and the installed command remain `scythe`,
+  so user-facing usage is unchanged. Install becomes `pip install artifact-scythe`.
+- README badges and install snippet updated accordingly. Release workflow
+  environment URL points at https://pypi.org/p/artifact-scythe.
+
+### Fixed
+- **Windows CI smoke test** crashed with `UnicodeEncodeError` on cp1252
+  when Rich rendered the braille spinner (`U+2838`) and box-drawing
+  characters. Setting `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1` at the
+  workflow level forces UTF-8 stdio across all jobs. Reproduced and
+  validated locally on Windows 11.
+- `banner.VERSION` was hardcoded to `0.3.0`; now mirrors
+  `scythe.__version__` so `scythe info` reports the real version.
+- Banner ASCII art switched to a raw string to silence the
+  invalid-escape `SyntaxWarning` raised on Python 3.12+.
+
+### Technical
+- First release pipeline run end-to-end (CI matrix → PyPI publish via
+  Trusted Publishing → GitHub Release with auto-generated notes).
+- Release v0.5.1
+
 ## [0.5.0] - 2026-05-01
 
 ### Added

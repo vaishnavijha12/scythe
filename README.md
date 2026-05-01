@@ -3,8 +3,8 @@
 > Un outil CLI intelligent pour nettoyer automatiquement les artefacts de build
 
 [![CI](https://github.com/elielMengue/scythe/actions/workflows/ci.yml/badge.svg)](https://github.com/elielMengue/scythe/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/scythe-cli.svg)](https://pypi.org/project/scythe-cli/)
-[![Python versions](https://img.shields.io/pypi/pyversions/scythe-cli.svg)](https://pypi.org/project/scythe-cli/)
+[![PyPI version](https://img.shields.io/pypi/v/artifact-scythe.svg)](https://pypi.org/project/artifact-scythe/)
+[![Python versions](https://img.shields.io/pypi/pyversions/artifact-scythe.svg)](https://pypi.org/project/artifact-scythe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ![Image externe](https://eliel-mengue.vercel.app/images/scythe.png)
@@ -35,10 +35,10 @@ pip install -e .
 ### Depuis PyPI
 
 ```bash
-pip install scythe-cli
+pip install artifact-scythe
 ```
 
-> Le package s'appelle `scythe-cli` sur PyPI (le nom `scythe` était déjà pris), mais la commande installée et le module Python restent `scythe`.
+> Le package s'appelle `artifact-scythe` sur PyPI (le nom `scythe` était déjà pris), mais la commande installée et le module Python restent `scythe`.
 
 ##  Usage
 
