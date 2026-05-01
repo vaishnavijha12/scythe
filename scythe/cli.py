@@ -15,6 +15,7 @@ from rich.table import Table
 
 from scythe import __version__
 from scythe.logger.logger import setup_logger
+from scythe.models.models import ProjectType
 from scythe.scanner.scanner import scan_directory
 from scythe.cleaner.cleaner import clean_artifacts
 from scythe.ui.ui import (
@@ -23,6 +24,22 @@ from scythe.ui.ui import (
 )
 
 from scythe.formatter.formatter import save_report
+
+
+def _parse_only_filter(value):
+    """Parse a comma-separated --only value into a set of ProjectType."""
+    if not value:
+        return None
+    types = set()
+    for token in value.split(','):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            types.add(ProjectType.from_alias(token))
+        except ValueError as exc:
+            raise click.BadParameter(str(exc), param_hint='--only')
+    return types or None
 
 
 console = Console()
@@ -115,8 +132,16 @@ def cli(ctx, verbose, no_log_file):
 
 @click.option('--no-artifacts', is_flag=True, help='Disable artifacts details output')
 
+@click.option(
+    '--only',
+    type=str,
+    default=None,
+    metavar='TYPES',
+    help='Comma-separated list of project types to keep (e.g. node,python,rust)'
+)
+
 @click.pass_context
-def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts):
+def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only):
     """
         Scan the directory
     """
@@ -124,6 +149,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts):
     console = ctx.obj["console"]
 
     scan_path = Path(path).resolve()
+    only_types = _parse_only_filter(only)
 
     logger.info(f"Scanning directory: {path}")
     logger.info(f"Maximal Depth: {depth}")
@@ -140,6 +166,14 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts):
             max_depth=depth,
             follow_symlinks=follow_symlinks,
             progress_callback=update_progress
+        )
+
+    if only_types:
+        before = len(result.projects)
+        result.projects = [p for p in result.projects if p.project_type in only_types]
+        logger.info(
+            f"--only filter: kept {len(result.projects)}/{before} projects "
+            f"({', '.join(t.display_name for t in only_types)})"
         )
 
 
@@ -199,8 +233,16 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts):
     help='Save the report of the clean result in a file'
 )
 
+@click.option(
+    '--only',
+    type=str,
+    default=None,
+    metavar='TYPES',
+    help='Comma-separated list of project types to clean (e.g. node,python,rust)'
+)
+
 @click.pass_context
-def clean(ctx, path, interactive, dry_run, depth, force, output):
+def clean(ctx, path, interactive, dry_run, depth, force, output, only):
     """
         Clean detected build artifacts.
 
@@ -236,6 +278,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output):
     console = ctx.obj["console"]
 
     scan_path = Path(path).resolve()
+    only_types = _parse_only_filter(only)
 
     console.print("[bold cyan]Step 1/2 : Scanning projects...[/bold cyan]")
 
@@ -252,6 +295,14 @@ def clean(ctx, path, interactive, dry_run, depth, force, output):
         )
 
     project_with_artifacts = [p for p in scan_result.projects if p.artifacts]
+
+    if only_types:
+        before = len(project_with_artifacts)
+        project_with_artifacts = [p for p in project_with_artifacts if p.project_type in only_types]
+        console.print(
+            f"[dim]--only filter: kept {len(project_with_artifacts)}/{before} projects "
+            f"({', '.join(t.display_name for t in only_types)})[/dim]"
+        )
 
     if not project_with_artifacts :
         console.print(

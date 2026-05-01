@@ -65,6 +65,33 @@
 `scythe scan /project_path --output report_file` this command will generate a report after the scan complete. Notice that the report file support only two types : **csv** and **json**
 - Release v0.3.0
 
+## [0.5.0] - 2026-05-01
+
+### Added
+- **`--only TYPES` filter** on both `scan` and `clean` commands. Accepts a
+  comma-separated list of project types (canonical values like `node`,
+  `python`, `rust`, `java_maven`, `java_gradle`, `go`, `ruby`, `dotnet`, or
+  short aliases like `py`, `js`, `rs`, `golang`, `.net`, `cs`).
+  - Example: `scythe clean ~/projects --only node,python --dry-run`
+- `ProjectType.from_alias` classmethod that resolves a user-supplied string
+  to a `ProjectType`, raising a clear error listing valid types on a typo.
+- Unit tests covering canonical names, short aliases, case/whitespace
+  insensitivity, and the unknown-alias error path.
+
+### Fixed
+- **Critical scanner bug**: `_scan_recursive` used `global project, artifacts`
+  and unconditionally appended `project` even when the current directory had
+  no marker file. This raised `NameError` on the first call for any non-project
+  root, which was silently swallowed by the outer try/except so users saw 0
+  projects with no surface error. Rewritten to use local variables and only
+  append when a project is actually detected.
+- Renamed test fixture `node_project_with_artifact` → `node_project_with_artifacts`
+  so that `test_detect_artifacts_node` resolves correctly.
+
+### Technical
+- Test suite: 29 → 33 passing.
+- Release v0.5.0
+
 ## [0.4.0] - 2026-02-06
 
 ### Added

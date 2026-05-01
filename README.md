@@ -53,6 +53,13 @@ scythe clean ~/projects --interactive
 scythe clean ~/projects --dry-run
 ```
 
+### Filtrer par type de projet
+
+```bash
+scythe scan ~/projects --only node,python
+scythe clean ~/projects --only rust --dry-run
+```
+
 ### Afficher l'aide
 
 ```bash
@@ -87,7 +94,7 @@ pytest -v
 - [x] Phase 3: Détection d'Artefacts
 - [x] Phase 4: Interface Utilisateur
 - [x] Phase 5: Moteur de Nettoyage
-- [ ] Phase 6: Fonctionnalités Avancées
+- [x] Phase 6: Fonctionnalités Avancées -- **Ongoing**
 - [ ] Phase 7: Tests & Validation
 - [ ] Phase 8: Documentation & Déploiement
 
@@ -97,8 +104,8 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 
 
 ## ⚠️ Status du Projet
-**Version 0.4.0**
-Cette version contient les features scan et clean (moteur de nettoyage).
+**Version 0.5.0**
+Cette version ajoute le filtre `--only` sur scan/clean et corrige un bug critique du scanner.
 
 ## Hint 
 **Read** the [changelog](https://github.com/elielMengue/scythe/blob/main/CHANGELOG.md) to see changes as I continue developping from time to time

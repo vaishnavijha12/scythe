@@ -2,6 +2,7 @@
 Testing Models
 """
 
+import pytest
 from pathlib import Path
 from datetime import datetime
 
@@ -12,6 +13,32 @@ def test_project_type_enum():
     assert ProjectType.NODE.value == "node"
     assert ProjectType.PYTHON.value == "python"
     assert ProjectType.NODE.display_name == "Node.js"
+
+
+def test_project_type_from_alias_canonical():
+    assert ProjectType.from_alias("node") == ProjectType.NODE
+    assert ProjectType.from_alias("python") == ProjectType.PYTHON
+    assert ProjectType.from_alias("rust") == ProjectType.RUST
+    assert ProjectType.from_alias("java_maven") == ProjectType.JAVA_MAVEN
+
+
+def test_project_type_from_alias_short_forms():
+    assert ProjectType.from_alias("py") == ProjectType.PYTHON
+    assert ProjectType.from_alias("js") == ProjectType.NODE
+    assert ProjectType.from_alias("rs") == ProjectType.RUST
+    assert ProjectType.from_alias("golang") == ProjectType.GO
+    assert ProjectType.from_alias(".net") == ProjectType.DOTNET
+
+
+def test_project_type_from_alias_case_and_whitespace_insensitive():
+    assert ProjectType.from_alias("  NODE ") == ProjectType.NODE
+    assert ProjectType.from_alias("Python") == ProjectType.PYTHON
+
+
+def test_project_type_from_alias_unknown_raises():
+    with pytest.raises(ValueError) as excinfo:
+        ProjectType.from_alias("cobol")
+    assert "Unknown project type" in str(excinfo.value)
 
 
 def test_artifact_info_creation():

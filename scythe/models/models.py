@@ -42,6 +42,41 @@ class ProjectType(Enum) :
 
         return names.get(self, self.value)
 
+    @classmethod
+    def from_alias(cls, alias: str) -> "ProjectType":
+        """
+        Resolve a user-supplied string (e.g. "node", "java", "dotnet") to a ProjectType.
+        Accepts the enum value directly or a short alias.
+        """
+        normalized = alias.strip().lower()
+        aliases = {
+            "node": cls.NODE,
+            "nodejs": cls.NODE,
+            "js": cls.NODE,
+            "python": cls.PYTHON,
+            "py": cls.PYTHON,
+            "rust": cls.RUST,
+            "rs": cls.RUST,
+            "java": cls.JAVA_MAVEN,
+            "maven": cls.JAVA_MAVEN,
+            "gradle": cls.JAVA_GRADLE,
+            "go": cls.GO,
+            "golang": cls.GO,
+            "ruby": cls.RUBY,
+            "rb": cls.RUBY,
+            "dotnet": cls.DOTNET,
+            ".net": cls.DOTNET,
+            "csharp": cls.DOTNET,
+            "cs": cls.DOTNET,
+        }
+        if normalized in aliases:
+            return aliases[normalized]
+        for member in cls:
+            if member.value == normalized:
+                return member
+        valid = sorted({a for a in aliases} | {m.value for m in cls if m is not cls.UNKNOWN})
+        raise ValueError(f"Unknown project type '{alias}'. Valid types: {', '.join(valid)}")
+
 @dataclass
 class ArtifactInfo :
         """

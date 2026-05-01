@@ -10,7 +10,7 @@ from scythe.detector.detector import ArtifactDetector, detect_artifacts, ARTIFAC
 from scythe.models.models import ProjectType
 
 @pytest.fixture
-def node_project_with_artifact(tmp_path):
+def node_project_with_artifacts(tmp_path):
 
     project = tmp_path / "my-app"
     project.mkdir()

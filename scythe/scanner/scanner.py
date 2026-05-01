@@ -134,8 +134,7 @@ class DirectoryScanner :
             depth: int,
             parent_has_artifacts: bool = False,) -> List[Project]:
 
-        global project, artifacts
-        projects = []
+        projects: List[Project] = []
 
         if self.should_skip_directory(directory, depth):
             return projects
@@ -147,7 +146,7 @@ class DirectoryScanner :
 
         project_type = self.detect_project_type(directory)
 
-        if project_type :
+        if project_type:
             self.logger.debug(f"Found project type {project_type.display_name} detected in : {directory}")
 
             markers_files = self.get_marker_files(directory, project_type)
@@ -162,16 +161,15 @@ class DirectoryScanner :
                 marker_files=markers_files,
                 artifacts=artifacts
             )
+            projects.append(project)
 
-        projects.append(project)
-
-        if artifacts :
-            total_size = sum(a.size_bytes for a in artifacts)
-            from scythe.utils.utils import format_size
-            self.logger.info(
-                f" {len(artifacts)} found artifacts"
-                f" {format_size(total_size)}"
-            )
+            if artifacts:
+                total_size = sum(a.size_bytes for a in artifacts)
+                from scythe.utils.utils import format_size
+                self.logger.info(
+                    f" {len(artifacts)} found artifacts"
+                    f" {format_size(total_size)}"
+                )
 
         try:
             for item in directory.iterdir():
