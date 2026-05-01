@@ -86,7 +86,7 @@ pytest -v
 - [x] Phase 2: Scanner de Répertoires
 - [x] Phase 3: Détection d'Artefacts
 - [x] Phase 4: Interface Utilisateur
-- [x] Phase 5: Moteur de Nettoyage  -- **Ongoing 50%**
+- [x] Phase 5: Moteur de Nettoyage
 - [ ] Phase 6: Fonctionnalités Avancées
 - [ ] Phase 7: Tests & Validation
 - [ ] Phase 8: Documentation & Déploiement
@@ -97,8 +97,8 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 
 
 ## ⚠️ Status du Projet
-**Version 0.3.0**
-Cette version contient le feature scan.
+**Version 0.4.0**
+Cette version contient les features scan et clean (moteur de nettoyage).
 
 ## Hint 
 **Read** the [changelog](https://github.com/elielMengue/scythe/blob/main/CHANGELOG.md) to see changes as I continue developping from time to time

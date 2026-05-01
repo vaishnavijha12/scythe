@@ -64,3 +64,24 @@
 - Add new option to the cli : command example `scythe scan /project_path --format [tree, table, json]` this helps format the scan result in a better way we want it to.
 `scythe scan /project_path --output report_file` this command will generate a report after the scan complete. Notice that the report file support only two types : **csv** and **json**
 - Release v0.3.0
+
+## [0.4.0] - 2026-02-06
+
+### Added
+- **Cleaning Engine** - Real artifact deletion built on top of the scanner/detector pipeline
+  - `ArtifactCleaner` class handles per-project and per-artifact removal with full error/skip tracking
+  - `CleanResult` dataclass aggregates deletion stats (artifacts deleted, space freed, success rate, duration)
+  - `safe_delete` helper for one-off path removal
+- **`scythe clean` CLI command** with the following modes:
+  - `--dry-run` : simulation, reports what would be freed without touching the disk
+  - `--interactive` / `-i` : manual selection of projects to clean
+  - `--force` / `-f` : skip confirmation prompt (for scripts/automation)
+  - `--depth` / `-d` : bound the preliminary scan
+  - `--output` / `-o` : export a JSON report of the clean run
+- Two-step UX: scan first, then confirm before deletion. Summary table rendered with Rich (cleaned projects, artifacts deleted, freed memory, success rate, errors, skipped).
+- Unit tests for the cleaner (`tests/test_cleaner.py`)
+
+### Technical
+- Permission/OSError/unknown-error paths are captured in `CleanResult.errors` instead of raising
+- Missing artifacts at deletion time are recorded in `CleanResult.skipped` rather than failing
+- Release v0.4.0
