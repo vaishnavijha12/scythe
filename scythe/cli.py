@@ -702,9 +702,10 @@ def info(ctx):
     [yellow]• .NET    [/yellow]  : bin/, obj/
 
     [bold underline]Core Commands:[/bold underline]
-    [bold green]scan[/bold green]   - Analyze directories to find projects and calculate potential savings.
-    [bold green]clean[/bold green]  - Purge detected artifacts (supports [italic]--dry-run[/italic] and [italic]--interactive[/italic]).
-    [bold green]info[/bold green]   - Display this overview and current configuration.
+    [bold green]scan[/bold green]    - Analyze directories to find projects and calculate potential savings.
+    [bold green]clean[/bold green]   - Purge detected artifacts (supports [italic]--dry-run[/italic], [italic]--interactive[/italic], [italic]--trash[/italic]).
+    [bold green]restore[/bold green] - Undo a previous [italic]clean --trash[/italic] run.
+    [bold green]info[/bold green]    - Display this overview and current configuration.
 
     [dim]Need more details? Run:[/dim] [bold reverse] scythe --help [/bold reverse]
     [dim]GitHub: https://github.com/elielMengue/scythe[/dim]

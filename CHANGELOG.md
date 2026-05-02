@@ -3,11 +3,6 @@
 ## [Unreleased]
 
 ### Planned — Safety & UX
-- **Trash-mode + `scythe restore`**: `scythe clean --trash` will move
-  artifacts to the OS trash (Recycle Bin on Windows, `~/.Trash` on macOS,
-  XDG `Trash` on Linux) instead of unlinking, and a new `scythe restore`
-  command will rehydrate the most recent run. Removes the current
-  "deletion is permanent" footgun.
 - **`scythe ui` — interactive TUI mode** (Textual): full-screen
   browse-and-clean experience with a filterable project list, expandable
   artifact tree, live total-size readout, item-level toggles, and an
@@ -32,6 +27,42 @@
 ### Planned — Telemetry & quality
 - **Lifetime stats** surfaced in `scythe info`.
 - **Comprehensive integration tests** for scanner/cleaner edge cases.
+
+## [0.6.0] - 2026-05-02
+
+### Added
+- **`scythe clean --trash`** — recoverable cleanup. Instead of
+  unlinking, artifacts are moved to a per-run directory under the
+  per-user data dir (`%LOCALAPPDATA%\scythe` on Windows,
+  `~/Library/Application Support/scythe` on macOS,
+  `$XDG_DATA_HOME/scythe` or `~/.local/share/scythe` on Linux), and
+  a JSON manifest records every move. The CLI prints the run id and
+  manifest path, and the existing "deletion is PERMANENT" warning is
+  now scoped to runs WITHOUT `--trash`.
+- **`scythe restore`** — undo a `clean --trash` run.
+  - `scythe restore --list` shows recoverable runs (id, date,
+    item count, total size, whether already restored).
+  - `scythe restore` (no args) restores the most recent run.
+  - `scythe restore <RUN_ID>` targets a specific run.
+  - Skip vs error are surfaced separately: a destination that
+    already exists or a missing trash payload is a skip; OS-level
+    failures are errors (non-zero exit).
+- **`scythe.trash` module** — new internal API: `TrashMover`,
+  `RunManifest`, `TrashedItem`, `get_trash_root`, `new_run_id`,
+  `list_runs`, `load_manifest`, `restore_run`. Reusable by the
+  upcoming TUI mode.
+- 19 new tests covering platform-specific data-dir resolution, name
+  collisions, manifest shape, skip vs error paths, end-to-end
+  `--trash` wiring, and `restore` round-trip.
+
+### Changed
+- `ArtifactCleaner` and `clean_artifacts` accept an optional
+  `trash_mover`; the cleaner threads `project_type` through
+  `clean_project` so the manifest can record it.
+- `clean` docstring: `--trash` now listed under Operating Modes.
+
+### Technical
+- Release v0.6.0.
 
 ## [0.5.3] - 2026-05-02
 

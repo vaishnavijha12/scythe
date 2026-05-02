@@ -41,7 +41,7 @@ mixed-stack `~/projects` folder in one workflow.
 | `npkill`   | Node only (`node_modules`)                        | Interactive TUI   | Sort by size / age                   | None            | npm                         |
 | `kondo`    | Rust + a handful (Node, JS, Java, Haskell, …)     | Interactive prompt| Older-than                           | None            | Cargo, Homebrew             |
 | `cleanpy`  | Python only                                       | CLI               | Cache types                          | None            | pip                         |
-| **`scythe`** | **Node, Python, Rust, Java (Maven + Gradle), Go, Ruby, .NET** (Swift planned) | CLI today, **TUI mode `scythe ui` planned** | `--only`, `--older-than`, `--min-size` (`--ignore` planned) | **JSON / CSV** export, dry-run report | **pipx**, pip, **Docker** (multi-arch), standalones planned |
+| **`scythe`** | **Node, Python, Rust, Java (Maven + Gradle), Go, Ruby, .NET** (Swift planned) | CLI today, **TUI mode `scythe ui` planned** | `--only`, `--older-than`, `--min-size` (`--ignore` planned) | **JSON / CSV** export, dry-run report, **recoverable trash + `scythe restore`** | **pipx**, pip, **Docker** (multi-arch), standalones planned |
 
 When to reach for which:
 - Only have a `node_modules` problem? `npkill` is purpose-built.
@@ -138,6 +138,7 @@ scythe scan ~/dev --format json -o report.json # also csv via .csv suffix
 
 ```bash
 scythe clean ~/dev --dry-run                   # simulate (always do this first)
+scythe clean ~/dev --trash                     # recoverable cleanup (undo with `scythe restore`)
 scythe clean ~/dev --interactive               # pick projects manually
 scythe clean ~/dev --only rust                 # only Rust target/ directories
 scythe clean ~/dev --older-than 30 --dry-run   # only target stale artifacts
@@ -147,8 +148,26 @@ scythe clean ~/dev -o run-report.json          # export a JSON report
 ```
 
 `clean` runs the same scan first, prints a summary, then either prompts
-before deleting or executes immediately depending on flags. **Deletion
-is permanent — files are not moved to the trash.**
+before deleting or executes immediately depending on flags.
+
+By default deletion is permanent — files are unlinked, not moved to the
+OS bin. Pass `--trash` to route them through scythe's recoverable trash
+instead, then use `scythe restore` to bring them back.
+
+### `scythe restore` — undo a `clean --trash` run
+
+```bash
+scythe restore --list                # show recoverable runs (id, date, items, size)
+scythe restore                       # undo the most recent --trash run
+scythe restore 20260502-153000-123456  # undo a specific run by id
+```
+
+Trashed runs live under the per-user data dir
+(`%LOCALAPPDATA%\scythe` on Windows, `~/Library/Application Support/scythe`
+on macOS, `$XDG_DATA_HOME/scythe` or `~/.local/share/scythe` on Linux).
+A run that's already been restored, has a missing trash payload, or whose
+destination has been re-created since the clean, is reported as *skipped*
+rather than failing.
 
 ### `scythe info`
 
@@ -221,15 +240,14 @@ invariant of the codebase.
 - [x] Rich-based output (table / tree / compact / JSON)
 - [x] Cleaning engine (`--dry-run`, `--interactive`, `--force`, JSON report)
 - [x] Filters: `--only`, `--older-than`, `--min-size`
+- [x] **Recoverable trash + `scythe restore`** — `scythe clean --trash`
+      moves artifacts under a per-user data dir and writes a per-run
+      manifest; `scythe restore` undoes the most recent run (or a
+      specific one by id). _(v0.6.0)_
 - [x] Distribution: PyPI (`pipx`), Docker (multi-arch GHCR)
 
 ### Safety & UX
 
-- [ ] **Trash-mode + `scythe restore`** — `scythe clean --trash` moves
-      artifacts to the OS trash (Recycle Bin on Windows, `~/.Trash` on
-      macOS, XDG `Trash` on Linux) instead of unlinking. A new
-      `scythe restore` command rehydrates the most recent run. Removes
-      the "deletion is permanent" footgun.
 - [ ] **`scythe ui` — interactive TUI mode** (Textual) — full-screen
       browse-and-clean experience: filterable project list, expandable
       artifact tree per project, live total-size readout, item-level
