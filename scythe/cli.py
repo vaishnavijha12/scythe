@@ -305,13 +305,19 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
 )
 
 @click.option(
+    '--trash',
+    is_flag=True,
+    help='Move artifacts to scythe\'s recoverable trash instead of deleting them. Use `scythe restore` to undo.'
+)
+
+@click.option(
     '--follow-symlinks',
     is_flag=True,
     help="Follow symbolic links during scan"
 )
 
 @click.pass_context
-def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, min_size, follow_symlinks):
+def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, min_size, trash, follow_symlinks):
     """
         Clean detected build artifacts.
 
@@ -327,19 +333,22 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             --dry-run       Simulation mode (no actual deletion; recommended first)
             --interactive   Manually select which projects to clean
             --force         Skip confirmation (useful for automated scripts)
+            --trash         Move artifacts to scythe's recoverable trash
+                            (undo with `scythe restore`)
 
         \b
         Examples:
             scythe clean  path_to_project --dry-run              # 1. Preview what would be deleted
-            scythe clean  path_to_project                        # 2. Clean with confirmation
-            scythe clean  path_to_project  --interactive         # 3. Manual selection mode
-            scythe clean  path_to_project  --force               # 4. Clean without confirmation
-            scythe clean  path_to_project  -o report.json        # 5. Export results to a report
+            scythe clean  path_to_project                        # 2. Clean with confirmation (PERMANENT)
+            scythe clean  path_to_project  --trash               # 3. Recoverable cleanup
+            scythe clean  path_to_project  --interactive         # 4. Manual selection mode
+            scythe clean  path_to_project  --force               # 5. Clean without confirmation
+            scythe clean  path_to_project  -o report.json        # 6. Export results to a report
 
         \b
         Warning:
-            • Deletion is PERMANENT (files are not moved to the trash)
-            • Always perform a --dry-run first to avoid accidental data loss
+            • Without --trash, deletion is PERMANENT (files are NOT sent to the OS bin)
+            • Always perform a --dry-run first when in doubt
             • Ensure that projects are not currently open or in use by other processes
     """
     logger = ctx.obj["logger"]
@@ -445,6 +454,18 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     if dry_run :
         console.print("[yellow]DRY-RUN enabled - simulation, no data is deleted[/yellow]\n")
 
+    trash_mover = None
+    manifest_path = None
+    if trash and not dry_run:
+        from scythe.trash import TrashMover
+
+        trash_mover = TrashMover()
+        console.print(
+            f"[cyan]TRASH mode enabled — artifacts will be moved to "
+            f"{trash_mover.trash_dir} and recoverable via "
+            f"[bold]scythe restore[/bold][/cyan]\n"
+        )
+
     with progress_bar() as progress:
         task = progress.add_task("[cyan]Cleaning...")
         total = len(selected_projects)
@@ -455,8 +476,12 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         clean_result = clean_artifacts(
             selected_projects,
             dry_run=dry_run,
-            progress_callback=update_clean_progress
+            progress_callback=update_clean_progress,
+            trash_mover=trash_mover,
         )
+
+    if trash_mover is not None:
+        manifest_path = trash_mover.finalize(scan_path=scan_path)
 
 
     console.print()
@@ -464,6 +489,20 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         console.print(
             f"[bold green]✓ [DRY-RUN] {clean_result.artifacts_deleted} artifacts "
             f"could be deleted ({clean_result.space_freed_formatted})[/bold green]"
+        )
+
+    elif trash_mover is not None:
+        console.print(
+            f"[bold green]✓ Trashed {clean_result.artifacts_deleted} artifacts "
+            f"({clean_result.space_freed_formatted}) in {clean_result.clean_duration:.2f}s[/bold green]"
+        )
+        console.print(
+            f"[dim]Run id: [bold]{trash_mover.run_id}[/bold] · "
+            f"manifest: {manifest_path}[/dim]"
+        )
+        console.print(
+            "[dim]Undo with: [bold]scythe restore[/bold] "
+            "(or [bold]scythe restore " + trash_mover.run_id + "[/bold])[/dim]"
         )
 
     else :

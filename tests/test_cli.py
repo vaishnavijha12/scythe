@@ -80,8 +80,9 @@ def test_clean_min_size_filters_before_cleaning(monkeypatch):
     root = Path.cwd()
     scan_result = ScanResult(root_path=root, projects=[_project_with_small_and_large_artifacts(root)])
 
-    def fake_clean_artifacts(projects, dry_run=False, progress_callback=None):
+    def fake_clean_artifacts(projects, dry_run=False, progress_callback=None, trash_mover=None):
         captured["projects"] = projects
+        captured["trash_mover"] = trash_mover
         if progress_callback:
             for project in projects:
                 progress_callback(f"Cleaning {project.path.name}")
@@ -121,3 +122,89 @@ def test_scan_rejects_invalid_min_size():
 
     assert invoke.exit_code != 0
     assert "Invalid value for --min-size" in invoke.output
+
+
+def test_clean_trash_flag_routes_through_trash_mover(monkeypatch, tmp_path):
+    """End-to-end: --trash builds a TrashMover, moves the artifact, writes a manifest."""
+    project_dir = tmp_path / "demo"
+    artifact_dir = project_dir / "node_modules"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "package.json").write_text("{}")
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=2048,
+        last_modified=datetime(2026, 5, 2),
+        artifact_type="node_modules",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.NODE,
+        marker_files=["package.json"],
+        artifacts=[artifact],
+    )
+    scan_result = ScanResult(root_path=project_dir, projects=[project])
+
+    trash_root = tmp_path / "scythe-data"
+    monkeypatch.setattr("scythe.trash.trash.get_trash_root", lambda: trash_root)
+    monkeypatch.setattr(cli_module, "progress_bar", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-trash"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "clean", str(project_dir), "--trash", "--force"],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+    assert not artifact_dir.exists()
+
+    runs = list((trash_root / "runs").glob("*.json"))
+    assert len(runs) == 1
+    import json
+    manifest = json.loads(runs[0].read_text())
+    assert len(manifest["items"]) == 1
+    assert manifest["items"][0]["original_path"] == str(artifact_dir)
+    assert manifest["items"][0]["project_type"] == "node"
+    assert manifest["scan_path"] == str(project_dir)
+
+
+def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
+    """--dry-run + --trash should NOT create a trash dir or manifest."""
+    project_dir = tmp_path / "demo"
+    artifact_dir = project_dir / "node_modules"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "package.json").write_text("{}")
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=2048,
+        last_modified=datetime(2026, 5, 2),
+        artifact_type="node_modules",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.NODE,
+        marker_files=["package.json"],
+        artifacts=[artifact],
+    )
+    scan_result = ScanResult(root_path=project_dir, projects=[project])
+
+    trash_root = tmp_path / "scythe-data"
+    monkeypatch.setattr("scythe.trash.trash.get_trash_root", lambda: trash_root)
+    monkeypatch.setattr(cli_module, "progress_bar", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-trash-dry"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "clean", str(project_dir), "--trash", "--dry-run", "--force"],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0
+    assert artifact_dir.exists()  # still here
+    assert not trash_root.exists()

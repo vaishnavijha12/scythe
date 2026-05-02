@@ -154,3 +154,102 @@ def test_safe_delete_file(tmp_path):
 
     assert result == True
     assert not test_file.exists()
+
+
+def test_clean_with_trash_mover_routes_through_trash(tmp_path):
+    """When a TrashMover is supplied, artifacts are moved instead of unlinked."""
+    from scythe.trash import TrashMover, restore_run
+
+    project_dir = tmp_path / "demo"
+    artifact_dir = project_dir / "node_modules"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "package.json").write_text("{}")
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=2048,
+        last_modified=datetime.now(),
+        artifact_type="node_modules",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.NODE,
+        marker_files=["package.json"],
+        artifacts=[artifact],
+    )
+
+    mover = TrashMover(root=tmp_path / "scythe-data")
+    result = clean_artifacts([project], dry_run=False, trash_mover=mover)
+    manifest_path = mover.finalize(scan_path=project_dir)
+
+    assert result.artifacts_deleted == 1
+    assert result.space_freed == 2048
+    assert not artifact_dir.exists()
+    assert manifest_path.exists()
+
+    # The package contents survived the move and a restore puts them back
+    summary = restore_run(manifest_path)
+    assert summary["restored"] == [str(artifact_dir)]
+    assert (artifact_dir / "package.json").read_text() == "{}"
+
+
+def test_clean_with_trash_mover_records_metadata(tmp_path):
+    """Manifest carries artifact_type and project_type from the cleaner."""
+    from scythe.trash import TrashMover, load_manifest
+
+    project_dir = tmp_path / "rusty"
+    artifact_dir = project_dir / "target"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "build.rs").write_text("// hi")
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=128,
+        last_modified=datetime.now(),
+        artifact_type="target",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.RUST,
+        marker_files=["Cargo.toml"],
+        artifacts=[artifact],
+    )
+
+    mover = TrashMover(root=tmp_path / "scythe-data")
+    clean_artifacts([project], dry_run=False, trash_mover=mover)
+    manifest_path = mover.finalize(scan_path=project_dir)
+
+    data = load_manifest(manifest_path)
+    assert len(data["items"]) == 1
+    assert data["items"][0]["artifact_type"] == "target"
+    assert data["items"][0]["project_type"] == "rust"
+
+
+def test_clean_dry_run_with_trash_mover_does_not_move(tmp_path):
+    """Dry-run should win even when --trash is set; nothing on disk changes."""
+    from scythe.trash import TrashMover
+
+    project_dir = tmp_path / "demo"
+    artifact_dir = project_dir / "node_modules"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "package.json").write_text("{}")
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=10,
+        last_modified=datetime.now(),
+        artifact_type="node_modules",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.NODE,
+        marker_files=["package.json"],
+        artifacts=[artifact],
+    )
+
+    mover = TrashMover(root=tmp_path / "scythe-data")
+    result = clean_artifacts([project], dry_run=True, trash_mover=mover)
+
+    assert result.artifacts_deleted == 1
+    assert artifact_dir.exists()
+    assert not (tmp_path / "scythe-data" / "trash").exists()

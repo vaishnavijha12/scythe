@@ -10,6 +10,7 @@ from datetime import datetime
 
 from scythe.models.models import Project, ArtifactInfo, CleanResult
 from scythe.logger.logger import get_logger
+from scythe.trash import TrashMover
 
 class ArtifactCleaner:
 
@@ -20,6 +21,10 @@ class ArtifactCleaner:
     dry_run
     verbose
     progress_callback
+    trash_mover  Optional TrashMover; when set, artifacts are moved into
+                 the scythe-managed trash dir instead of being unlinked.
+                 Mutually compatible with dry_run (which short-circuits
+                 first).
     """
 
     def __init__(
@@ -27,11 +32,13 @@ class ArtifactCleaner:
             dry_run: bool = False,
             verbose: bool = False,
             progress_callback: Optional[Callable[[str], None]] = None,
+            trash_mover: Optional[TrashMover] = None,
     ):
 
         self.dry_run = dry_run
         self.verbose = verbose
         self.progress_callback = progress_callback
+        self.trash_mover = trash_mover
         self.logger = get_logger()
 
         self.artifacts_deleted = 0
@@ -87,13 +94,13 @@ class ArtifactCleaner:
         cleaned = False
 
         for artifact in project.artifacts :
-            if self.clean_artifact(artifact) :
+            if self.clean_artifact(artifact, project=project) :
                 cleaned = True
 
         return cleaned
 
 
-    def clean_artifact(self, artifact: ArtifactInfo)-> bool:
+    def clean_artifact(self, artifact: ArtifactInfo, project: Optional[Project] = None)-> bool:
         artifact_path = artifact.path
 
         try:
@@ -107,6 +114,18 @@ class ArtifactCleaner:
                 self.logger.info(f"[DRY-RUN] Removing {artifact_path}")
                 self.artifacts_deleted +=1
                 self.space_freed += artifact.size_bytes
+                return True
+
+            if self.trash_mover is not None:
+                self.trash_mover.move(
+                    artifact_path,
+                    size_bytes=artifact.size_bytes,
+                    artifact_type=artifact.artifact_type,
+                    project_type=project.project_type.value if project else "",
+                )
+                self.artifacts_deleted += 1
+                self.space_freed += artifact.size_bytes
+                self.logger.info(f"✓ Trashed : {artifact_path}")
                 return True
 
             #Real world removing :)
@@ -159,12 +178,14 @@ class ArtifactCleaner:
 def clean_artifacts(
         projects: List[Project],
         dry_run: bool = False,
-        progress_callback: Optional[Callable[[str], None]] = None
+        progress_callback: Optional[Callable[[str], None]] = None,
+        trash_mover: Optional[TrashMover] = None,
     ) -> CleanResult:
 
         cleaner = ArtifactCleaner(
             dry_run=dry_run,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            trash_mover=trash_mover,
         )
         return cleaner.clean_projects(projects)
 
