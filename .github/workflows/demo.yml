@@ -92,7 +92,7 @@ jobs:
           Set Height 200
           Type "echo hello-from-vhs"
           Enter
-          Sleep 800
+          Sleep 500ms
           TAPE
           timeout 120 vhs /tmp/smoke.tape
           ls -lh /tmp/smoke.gif

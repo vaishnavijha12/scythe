@@ -38,7 +38,7 @@ Set Padding 20
 Hide
 Type "python demo/fixture.py setup"
 Enter
-Sleep 1500
+Sleep 1500ms
 Type "clear"
 Enter
 Show
@@ -48,54 +48,54 @@ Show
 # ---------------------------------------------------------------------------
 Type "# A year of dev work leaves a lot of stale build artifacts behind."
 Enter
-Sleep 1200
+Sleep 1200ms
 Type "python demo/fixture.py size"
-Sleep 400
+Sleep 400ms
 Enter
-Sleep 1800
+Sleep 1800ms
 
 # ---------------------------------------------------------------------------
 # Scene 2 — scan: see what's there, grouped by ecosystem
 # ---------------------------------------------------------------------------
 Type "scythe scan /tmp/scythe-demo"
-Sleep 400
+Sleep 400ms
 Enter
-Sleep 4500
+Sleep 4500ms
 
 # ---------------------------------------------------------------------------
 # Scene 3 — dry-run: rehearse the deletion safely
 # ---------------------------------------------------------------------------
 Type "scythe clean /tmp/scythe-demo --dry-run --force"
-Sleep 400
+Sleep 400ms
 Enter
-Sleep 4000
+Sleep 4000ms
 
 # ---------------------------------------------------------------------------
 # Scene 4 — do it for real
 # ---------------------------------------------------------------------------
 Type "scythe clean /tmp/scythe-demo --force"
-Sleep 400
+Sleep 400ms
 Enter
-Sleep 4000
+Sleep 4000ms
 
 # ---------------------------------------------------------------------------
 # Scene 5 — proof the disk space came back
 # ---------------------------------------------------------------------------
 Type "python demo/fixture.py size"
-Sleep 400
+Sleep 400ms
 Enter
-Sleep 2500
+Sleep 2500ms
 
 # ---------------------------------------------------------------------------
 # Scene 6 — pitch the advanced flags, end on a tagline
 # ---------------------------------------------------------------------------
 Type "# scan + clean also support --only, --older-than, --interactive, JSON reports."
 Enter
-Sleep 2200
+Sleep 2200ms
 
 # Cleanup (hidden so it doesn't show up in the GIF)
 Hide
 Type "python demo/fixture.py cleanup"
 Enter
 Show
-Sleep 500
+Sleep 500ms
