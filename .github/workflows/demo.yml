@@ -29,6 +29,9 @@ jobs:
   render:
     name: Render demo/demo.gif
     runs-on: ubuntu-latest
+    # Hard cap so a hung VHS/ttyd session can't burn through Actions
+    # minutes for hours — the render itself is well under a minute.
+    timeout-minutes: 10
     permissions:
       contents: write   # required to push the regenerated GIF back to main
     steps:
@@ -76,8 +79,28 @@ jobs:
           ttyd --version
           ffmpeg -version | head -1
 
-      - name: Render
-        run: vhs demo/demo.tape
+      - name: Sanity-check VHS with a tiny tape
+        # If this hangs, the problem is the VHS/ttyd toolchain on the
+        # runner, not our real tape. Easier to debug a 3-line tape than
+        # the full demo.
+        run: |
+          set -euxo pipefail
+          cat > /tmp/smoke.tape <<'TAPE'
+          Output /tmp/smoke.gif
+          Set Shell "bash"
+          Set Width 400
+          Set Height 200
+          Type "echo hello-from-vhs"
+          Enter
+          Sleep 800
+          TAPE
+          timeout 120 vhs /tmp/smoke.tape
+          ls -lh /tmp/smoke.gif
+
+      - name: Render the real demo
+        # Hard timeout in case ttyd hangs holding the websocket open.
+        # 5 min is ~10x the expected render time.
+        run: timeout 300 vhs demo/demo.tape
 
       - name: Show result
         run: |
