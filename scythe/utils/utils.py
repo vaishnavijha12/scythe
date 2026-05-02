@@ -78,14 +78,15 @@ def parse_size_threshold(value: str | None) -> int | None:
     if value is None:
         return None
 
-    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*([kmgt]?b)?\s*", value, re.IGNORECASE)
+    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*([kmgt])?b?\s*", value, re.IGNORECASE)
     if not match:
         raise ValueError(
             "Invalid size. Use raw bytes or a unit like 100MB, 1GB, or 512KB."
         )
 
     amount = float(match.group(1))
-    unit = (match.group(2) or "B").upper()
+    prefix = (match.group(2) or "").upper()
+    unit = prefix + "B"
     size_bytes = int(amount * SIZE_UNITS[unit])
 
     if size_bytes < 0:

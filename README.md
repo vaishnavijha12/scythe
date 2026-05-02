@@ -195,14 +195,36 @@ invariant of the codebase.
 
 ## Roadmap
 
+Shipped:
 - [x] Configuration & foundations
 - [x] Directory scanner
-- [x] Artifact detection
+- [x] Artifact detection (8 ecosystems)
 - [x] Rich-based UI (table / tree / compact / JSON)
 - [x] Cleaning engine (`--dry-run`, `--interactive`, `--force`, JSON report)
-- [x] Advanced features — *in progress* (`--only`, `--older-than`, `--min-size` shipped; planned: `--ignore`, trash-mode)
-- [ ] Comprehensive tests & validation
-- [ ] Broader distribution (Homebrew tap, Scoop)
+- [x] Filters: `--only`, `--older-than`, `--min-size`
+
+Next up:
+- [ ] **Trash-mode + recovery** — `scythe clean --trash` moves artifacts to the
+      OS trash (Recycle Bin / `~/.Trash` / XDG `Trash`) instead of unlinking,
+      and `scythe restore` brings the most recent run back. Removes the
+      "deletion is permanent" footgun.
+- [ ] **Standalone binaries** — single-file executables published on GitHub
+      Releases for users who don't have Python:
+  - macOS — Apple Silicon (`arm64`) and Intel (`x86_64`)
+  - Linux — `x86_64` and `arm64` (glibc); musl/static build for Alpine
+  - Windows — `x86_64` (`.exe`)
+  - Optional: FreeBSD `x86_64`
+- [ ] **Package-manager distribution** — Homebrew tap, Scoop bucket, winget,
+      and an AUR package.
+- [ ] **`--ignore PATTERN`** — extra ignore patterns layered on top of the
+      built-in defaults.
+- [ ] **Shell completions** — `scythe completion {bash,zsh,fish,powershell}`.
+- [ ] **Config file** — `pyproject.toml [tool.scythe]` and/or `~/.scytherc`
+      to persist `--only` / `--ignore` / depth defaults per machine.
+- [ ] **Lifetime stats** — track total space reclaimed across runs and show
+      it in `scythe info`.
+- [ ] **Comprehensive tests & validation** — broader scanner/cleaner
+      integration coverage.
 
 See [CHANGELOG.md](CHANGELOG.md) for the release history.
 

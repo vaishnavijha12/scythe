@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Planned
+- **Trash-mode + recovery**: `scythe clean --trash` will move artifacts to the
+  OS trash (Recycle Bin on Windows, `~/.Trash` on macOS, XDG `Trash` on
+  Linux) instead of unlinking, and a new `scythe restore` command will
+  re-hydrate the most recent run. This removes the current "deletion is
+  permanent" footgun.
+- **Standalone binaries** on GitHub Releases for users who don't have
+  Python:
+  - macOS (`arm64` + `x86_64`)
+  - Linux (`x86_64` glibc, `x86_64` musl static, `arm64`)
+  - Windows (`x86_64` `.exe`)
+- **Package-manager distribution**: Homebrew tap, Scoop bucket, winget
+  manifest, AUR.
+- **`--ignore PATTERN`** filter and shell completions
+  (`scythe completion {bash,zsh,fish,powershell}`).
+- **Config file** support (`pyproject.toml [tool.scythe]` and/or
+  `~/.scytherc`) for persistent defaults.
+
 ## [0.5.3] - 2026-05-02
 
 ### Added

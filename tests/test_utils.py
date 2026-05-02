@@ -179,6 +179,10 @@ def test_parse_size_threshold_units():
     assert parse_size_threshold("1KB") == 1024
     assert parse_size_threshold("1.5MB") == int(1.5 * 1024 * 1024)
     assert parse_size_threshold("2 gb") == 2 * 1024 * 1024 * 1024
+    assert parse_size_threshold("100K") == 100 * 1024
+    assert parse_size_threshold("1M") == 1024 * 1024
+    assert parse_size_threshold("2G") == 2 * 1024 ** 3
+    assert parse_size_threshold("1t") == 1024 ** 4
 
 
 def test_parse_size_threshold_invalid():
@@ -198,11 +202,10 @@ def test_format_size_negative_raises():
         format_size(-1)
 
 
-def test_is_ignored_path_known_dirs():
-    root = Path("/workspace")
-    assert is_ignored_path(root / ".git") is True
-    assert is_ignored_path(root / ".idea") is True
-    assert is_ignored_path(root / "src") is False
+def test_is_ignored_path_known_dirs(tmp_path):
+    assert is_ignored_path(tmp_path / ".git") is True
+    assert is_ignored_path(tmp_path / ".idea") is True
+    assert is_ignored_path(tmp_path / "src") is False
 
 
 def test_is_ignored_path_custom():

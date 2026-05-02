@@ -211,7 +211,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
             f"--older-than {older_than} filter: kept {len(result.projects)}/{before} projects"
         )
 
-    if min_size_bytes and min_size_bytes > 0:
+    if min_size_bytes:
         from scythe.utils.utils import filter_projects_by_artifact_size
 
         before_projects = len(result.projects)
@@ -385,7 +385,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             f"{len(project_with_artifacts)}/{before} projects[/dim]"
         )
 
-    if min_size_bytes and min_size_bytes > 0:
+    if min_size_bytes:
         from scythe.utils.utils import filter_projects_by_artifact_size
 
         before_projects = len(project_with_artifacts)
