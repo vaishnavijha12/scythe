@@ -554,10 +554,10 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         "errors": clean_result.errors,
         "skipped": clean_result.skipped
     }
-
     if output:
         output_path = Path(output)
-        output_path.write_text(json.dumps(report, indent=2), encoding='utf-8')
+        output_format = 'json' if output_path.suffix == '.json' else 'csv'
+        save_report(report, output_path, output_format)
         console.print(f"\n[green]✓ Report saved: {output_path}[/green]")
 
 
