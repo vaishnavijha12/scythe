@@ -1,0 +1,89 @@
+name: Render demo GIF
+
+# Re-renders demo/demo.gif from demo/demo.tape on a Linux runner and
+# commits it back. We do this in CI because VHS / ttyd does not render
+# reliably on native Windows, and we don't want every contributor to
+# install VHS + ffmpeg + ttyd locally.
+#
+# Triggers:
+#   - any push to main that touches the tape, the fixture helper, or the
+#     CLI surface area whose output the GIF depicts
+#   - manual dispatch (rerender on demand without a code change)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "demo/demo.tape"
+      - "demo/fixture.py"
+      - "scythe/cli.py"
+      - "scythe/ui/ui.py"
+      - ".github/workflows/demo.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: demo-gif
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Render demo/demo.gif
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to push the regenerated GIF back to main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # We need to push a commit; the default fetch-depth=1 is fine
+          # because we only commit on top of HEAD.
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scythe
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Install VHS dependencies (ttyd + ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          # ttyd is not in the default Ubuntu repos at a recent enough
+          # version; download the upstream static binary.
+          TTYD_VERSION="1.7.7"
+          curl -fsSL -o /tmp/ttyd \
+              "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64"
+          chmod +x /tmp/ttyd
+          sudo mv /tmp/ttyd /usr/local/bin/ttyd
+          ttyd --version
+
+      - name: Install VHS
+        uses: charmbracelet/vhs-action@v2.1.0
+
+      - name: Render
+        run: vhs demo/demo.tape
+
+      - name: Show result
+        run: |
+          ls -lh demo/demo.gif demo/demo.mp4
+          file demo/demo.gif
+
+      - name: Commit regenerated GIF
+        run: |
+          # Stop early if nothing actually changed (e.g. timing was
+          # identical) — git commit fails on an empty diff and we don't
+          # want a red workflow for that.
+          if git diff --quiet demo/demo.gif demo/demo.mp4; then
+            echo "GIF unchanged — nothing to commit."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add demo/demo.gif demo/demo.mp4
+          git commit -m "chore: regenerate demo/demo.gif from demo.tape"
+          git push
