@@ -9,6 +9,8 @@
 
 ![Artifact-Scythe](https://eliel-mengue.vercel.app/images/scythe.png)
 
+![Demo](demo/demo.gif)
+
 `scythe` is a Python CLI that walks your projects directory, identifies each
 project's ecosystem (Node, Python, Rust, Java, Go, Ruby, .NET) from its
 marker files, and locates the bulky build artifacts that ecosystem leaves
@@ -31,7 +33,7 @@ it by hand across dozens of project folders is tedious and error-prone.
 ## Quick start
 
 ```bash
-pip install artifact-scythe
+pipx install artifact-scythe          # one-line global install
 
 scythe scan ~/projects                # see what's eating your disk
 scythe clean ~/projects --dry-run     # preview the deletions
@@ -40,18 +42,53 @@ scythe clean ~/projects               # do it (with confirmation)
 
 ## Install
 
-### From PyPI (recommended)
+### With `pipx` (recommended)
+
+[`pipx`](https://pipx.pypa.io/) installs `scythe` into its own isolated
+virtual environment and exposes the `scythe` command globally on your
+`PATH`. It's the right tool for Python CLIs: no clash with your project
+deps, no `sudo`, one command to upgrade.
 
 ```bash
-pipx install artifact-scythe          # isolated install, preferred for CLIs
-# or
-pip install artifact-scythe
+pipx install artifact-scythe          # install
+pipx upgrade artifact-scythe          # update later
+pipx uninstall artifact-scythe        # remove cleanly
 ```
 
-> The PyPI distribution name is `artifact-scythe` (the `scythe` slot on
-> PyPI was taken), but the installed command and the Python module are
-> both `scythe`. Existing scripts written against `scythe ...` keep
-> working unchanged.
+Don't have `pipx` yet? `python -m pip install --user pipx && python -m pipx ensurepath`
+(restart your shell once).
+
+### With `pip`
+
+If you don't want the isolated install, plain `pip` works too:
+
+```bash
+pip install --user artifact-scythe    # user-level install
+```
+
+### Naming note
+
+The PyPI distribution is `artifact-scythe` (the `scythe` slot on PyPI was
+taken), but the installed command and the Python module are both `scythe`.
+Scripts written against `scythe ...` keep working unchanged.
+
+### With Docker
+
+If you'd rather not install anything locally (CI agents, throwaway VMs,
+or just trying it out), the official image is published on GHCR for both
+`linux/amd64` and `linux/arm64`:
+
+```bash
+# scan the current directory
+docker run --rm -v "$PWD":/work ghcr.io/elielmengue/scythe:latest scan /work
+
+# clean with a dry-run
+docker run --rm -v "$PWD":/work ghcr.io/elielmengue/scythe:latest \
+    clean /work --dry-run
+```
+
+Tags follow the PyPI release: `:latest`, `:0.5.2`, `:0.5`, `:0`. The
+rolling `:edge` tag tracks `main`.
 
 ### From source
 
