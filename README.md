@@ -7,7 +7,6 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/artifact-scythe.svg)](https://pypi.org/project/artifact-scythe/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Artifact-Scythe](https://eliel-mengue.vercel.app/images/scythe.png)
 
 ![Demo](demo/demo.gif)
 
