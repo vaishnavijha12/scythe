@@ -48,21 +48,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Install VHS dependencies (ttyd + ffmpeg)
+      - name: Install VHS + dependencies
+        # We install VHS from charm's official apt repo rather than via
+        # charmbracelet/vhs-action, because the action's bundled ffmpeg
+        # installer breaks intermittently on GitHub-hosted runners.
+        # The apt package pulls in ffmpeg as a dependency. ttyd isn't
+        # packaged at a recent-enough version on Ubuntu, so grab the
+        # upstream static binary.
         run: |
+          set -euxo pipefail
+
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://repo.charm.sh/apt/gpg.key \
+              | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
+              | sudo tee /etc/apt/sources.list.d/charm.list
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          # ttyd is not in the default Ubuntu repos at a recent enough
-          # version; download the upstream static binary.
+          sudo apt-get install -y vhs ffmpeg
+
           TTYD_VERSION="1.7.7"
           curl -fsSL -o /tmp/ttyd \
               "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64"
           chmod +x /tmp/ttyd
           sudo mv /tmp/ttyd /usr/local/bin/ttyd
-          ttyd --version
 
-      - name: Install VHS
-        uses: charmbracelet/vhs-action@v2.1.0
+          vhs --version
+          ttyd --version
+          ffmpeg -version | head -1
 
       - name: Render
         run: vhs demo/demo.tape
