@@ -19,8 +19,8 @@
 #
 #   vhs demo/demo.tape
 
-Output demo/demo.gif
-Output demo/demo.mp4
+Output "demo/demo.gif"
+Output "demo/demo.mp4"
 
 Set Shell "bash"
 Set FontSize 16

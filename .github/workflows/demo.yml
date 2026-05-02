@@ -86,7 +86,7 @@ jobs:
         run: |
           set -euxo pipefail
           cat > /tmp/smoke.tape <<'TAPE'
-          Output /tmp/smoke.gif
+          Output "/tmp/smoke.gif"
           Set Shell "bash"
           Set Width 400
           Set Height 200
