@@ -140,8 +140,16 @@ def cli(ctx, verbose, no_log_file):
     help='Comma-separated list of project types to keep (e.g. node,python,rust)'
 )
 
+@click.option(
+    '--older-than',
+    type=int,
+    default=0,
+    metavar='DAYS',
+    help='Only keep artifacts whose last_modified is older than DAYS days'
+)
+
 @click.pass_context
-def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only):
+def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, older_than):
     """
         Scan the directory
     """
@@ -174,6 +182,14 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only):
         logger.info(
             f"--only filter: kept {len(result.projects)}/{before} projects "
             f"({', '.join(t.display_name for t in only_types)})"
+        )
+
+    if older_than and older_than > 0:
+        from scythe.utils.utils import filter_projects_by_artifact_age
+        before = len(result.projects)
+        result.projects = filter_projects_by_artifact_age(result.projects, older_than)
+        logger.info(
+            f"--older-than {older_than} filter: kept {len(result.projects)}/{before} projects"
         )
 
 
@@ -241,8 +257,22 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only):
     help='Comma-separated list of project types to clean (e.g. node,python,rust)'
 )
 
+@click.option(
+    '--older-than',
+    type=int,
+    default=0,
+    metavar='DAYS',
+    help='Only clean artifacts whose last_modified is older than DAYS days'
+)
+
+@click.option(
+    '--follow-symlinks',
+    is_flag=True,
+    help="Follow symbolic links during scan"
+)
+
 @click.pass_context
-def clean(ctx, path, interactive, dry_run, depth, force, output, only):
+def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, follow_symlinks):
     """
         Clean detected build artifacts.
 
@@ -273,7 +303,6 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only):
             • Always perform a --dry-run first to avoid accidental data loss
             • Ensure that projects are not currently open or in use by other processes
     """
-    global output_path
     logger = ctx.obj["logger"]
     console = ctx.obj["console"]
 
@@ -291,6 +320,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only):
         scan_result = scan_directory(
             path=scan_path,
             max_depth=depth,
+            follow_symlinks=follow_symlinks,
             progress_callback=update_progress
         )
 
@@ -302,6 +332,17 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only):
         console.print(
             f"[dim]--only filter: kept {len(project_with_artifacts)}/{before} projects "
             f"({', '.join(t.display_name for t in only_types)})[/dim]"
+        )
+
+    if older_than and older_than > 0:
+        from scythe.utils.utils import filter_projects_by_artifact_age
+        before = len(project_with_artifacts)
+        project_with_artifacts = filter_projects_by_artifact_age(
+            project_with_artifacts, older_than
+        )
+        console.print(
+            f"[dim]--older-than {older_than} filter: kept "
+            f"{len(project_with_artifacts)}/{before} projects[/dim]"
         )
 
     if not project_with_artifacts :
@@ -320,8 +361,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only):
     )
 
     if interactive :
-        selected_projects = interactive_select_project
-        (project_with_artifacts, scan_path)
+        selected_projects = interactive_select_project(project_with_artifacts, scan_path)
         if not selected_projects :
             console.print(
                 "[yellow]Nothing found[/yellow]"
@@ -399,12 +439,12 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only):
 
     if clean_result.errors:
         console.print()
-    console.print(f"[bold red] Errors : [/bold red]")
-    for error in clean_result.errors[:5]:
-        console.print(f"  [red]•[/red] {error}")
+        console.print(f"[bold red] Errors : [/bold red]")
+        for error in clean_result.errors[:5]:
+            console.print(f"  [red]•[/red] {error}")
 
-    if len(clean_result.errors) > 5:
-        console.print(f"  [dim]... and {len(clean_result.errors) - 5} others[/dim]")
+        if len(clean_result.errors) > 5:
+            console.print(f"  [dim]... and {len(clean_result.errors) - 5} others[/dim]")
 
     report = {
         "clean_date": datetime.now().isoformat(),

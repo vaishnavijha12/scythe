@@ -104,14 +104,11 @@ def display_tree_view(result: ScanResult, scan_path: Path) -> None:
     project_by_type = defaultdict(list)
 
     for project in result.projects :
-        ptype = project.project_type
-        if ptype in project_by_type :
-            project_by_type[ptype] = []
-        project_by_type[ptype].append(project)
+        project_by_type[project.project_type].append(project)
 
     for project_type, projects in project_by_type.items() :
         type_branch = tree.add(
-            f"[cyan]{project_type.display_name}[/cyan] ({len(projects)} projects) projects"
+            f"[cyan]{project_type.display_name}[/cyan] ({len(projects)} projects)"
         )
 
         for project in projects :
@@ -123,7 +120,7 @@ def display_tree_view(result: ScanResult, scan_path: Path) -> None:
             project_info = f"[white]{relative_path}[/white]"
 
             if project.artifacts :
-                project_info += f" [yellow]({len(project.artifacts)} artifacts, {project.total_artifact_size})[/yellow]"
+                project_info += f" [yellow]({len(project.artifacts)} artifacts, {project.total_size_formatted})[/yellow]"
             project_branch = type_branch.add(project_info)
 
             for artifact in project.artifacts[:5] :

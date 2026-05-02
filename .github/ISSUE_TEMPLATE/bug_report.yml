@@ -1,0 +1,73 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please include the version and the exact
+        command you ran — most issues are reproducible from those alone.
+
+  - type: input
+    id: version
+    attributes:
+      label: scythe version
+      description: Output of `scythe --version`
+      placeholder: e.g. SCYTHE, version 0.5.1
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`
+      placeholder: e.g. Python 3.12.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other (please describe in the report)
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      description: Paste the exact command, with all flags.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Include stdout, stderr, and any traceback.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log file (optional)
+      description: |
+        Relevant section from `logs/scyth_*.log` (created automatically
+        unless you ran with `--no-log-file`).
+      render: text

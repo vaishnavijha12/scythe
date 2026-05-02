@@ -69,6 +69,7 @@ pip install -e ".[dev]"
 scythe scan .                                  # current directory
 scythe scan ~/dev --depth 2                    # bound recursion depth
 scythe scan ~/dev --only node,python           # filter by ecosystem
+scythe scan ~/dev --older-than 30              # only artifacts older than 30 days
 scythe scan ~/dev --format tree                # table | tree | compact | json
 scythe scan ~/dev --format json -o report.json # also csv via .csv suffix
 ```
@@ -81,6 +82,7 @@ scythe scan ~/dev --format json -o report.json # also csv via .csv suffix
 scythe clean ~/dev --dry-run                   # simulate (always do this first)
 scythe clean ~/dev --interactive               # pick projects manually
 scythe clean ~/dev --only rust                 # only Rust target/ directories
+scythe clean ~/dev --older-than 30 --dry-run   # only target stale artifacts
 scythe clean ~/dev --force                     # skip the confirmation prompt
 scythe clean ~/dev -o run-report.json          # export a JSON report
 ```
@@ -158,7 +160,7 @@ invariant of the codebase.
 - [x] Artifact detection
 - [x] Rich-based UI (table / tree / compact / JSON)
 - [x] Cleaning engine (`--dry-run`, `--interactive`, `--force`, JSON report)
-- [x] Advanced features — *in progress* (`--only` shipped; planned: `--older-than`, `--min-size`, `--ignore`, trash-mode)
+- [x] Advanced features — *in progress* (`--only`, `--older-than` shipped; planned: `--min-size`, `--ignore`, trash-mode)
 - [ ] Comprehensive tests & validation
 - [ ] Broader distribution (Homebrew tap, Scoop)
 

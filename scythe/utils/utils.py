@@ -4,8 +4,11 @@
 
 import os
 from pathlib import Path
-from datetime import datetime
-from typing import Set
+from datetime import datetime, timedelta
+from typing import List, Set, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from scythe.models.models import Project
 
 IGNORED_PATTERNS: Set[str] = {
     '.git',
@@ -54,6 +57,42 @@ def calculate_directory_size(path: Path, follow_symlinks: bool = False) -> int:
         pass
 
     return total_size
+
+
+def filter_projects_by_artifact_age(
+    projects: List["Project"],
+    min_age_days: int,
+    now: datetime | None = None,
+) -> List["Project"]:
+    """
+    Return a new list of Projects whose artifacts are at least
+    `min_age_days` old (based on `last_modified`). Projects whose every
+    artifact is too recent are dropped entirely.
+
+    `now` is injectable to make tests deterministic.
+    """
+    if min_age_days <= 0:
+        return list(projects)
+
+    from scythe.models.models import Project
+
+    reference = now or datetime.now()
+    cutoff = reference - timedelta(days=min_age_days)
+    result: List[Project] = []
+    for project in projects:
+        old_artifacts = [a for a in project.artifacts if a.last_modified <= cutoff]
+        if not old_artifacts:
+            continue
+        result.append(
+            Project(
+                path=project.path,
+                project_type=project.project_type,
+                marker_files=list(project.marker_files),
+                artifacts=old_artifacts,
+                last_scanned=project.last_scanned,
+            )
+        )
+    return result
 
 
 def is_ignored_path(path: Path, custom_ignores: Set[str] = None) -> bool :

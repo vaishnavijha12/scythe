@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.5.2] - 2026-05-02
+
+### Added
+- **`--older-than DAYS` filter** on both `scan` and `clean` commands.
+  Drops projects whose artifacts are all more recent than the cutoff, and
+  within kept projects narrows the artifact list to the ones older than
+  the cutoff. Backed by `filter_projects_by_artifact_age` in
+  `scythe/utils/utils.py` (with an injectable `now` for deterministic
+  tests).
+  - Example: `scythe clean ~/projects --older-than 30 --dry-run`
+- `--follow-symlinks` flag on `clean` (was missing — `scan` already had it,
+  so the two commands disagreed on symlinked trees).
+- `tests/test_utils.py`: covers the new age filter (boundary, mutation
+  safety, recent-only drop, mixed-age narrowing) plus regression tests for
+  `format_size` and `is_ignored_path`.
+- Contributor onboarding: `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`,
+  and `.github/ISSUE_TEMPLATE/` (bug report, feature request, config).
+
+### Fixed
+- `clean` command had three bugs that any real interactive run would have
+  hit:
+  - `selected_projects = interactive_select_project` followed by a bare
+    `(project_with_artifacts, scan_path)` tuple on the next line — the
+    function was never called and `selected_projects` was bound to the
+    function object. `--interactive` is now functional.
+  - Stray `global output_path` at the top of `clean` leaked module-level
+    state across invocations.
+  - The post-clean "Errors:" header and its loop were outside the
+    `if clean_result.errors:` guard, so an empty Errors section was
+    printed on every successful run.
+- `display_tree_view` (Rich tree output): the `defaultdict` grouping
+  reset the per-type list on every duplicate key, so only the *last*
+  project per ecosystem rendered. Now correctly groups all projects.
+  Tree nodes also format sizes (`1.00 MB`) instead of raw byte ints.
+
+### Technical
+- Test suite: 33 → 42 passing.
+- Release v0.5.2
+
 ## [0.1.0] - 2025-01-29
 
 ### Added

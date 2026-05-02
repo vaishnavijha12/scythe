@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a new flag, command, or ecosystem
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation that the current scythe does not handle well.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: |
+        Concretely, what would you like scythe to do? Sketch a CLI
+        invocation if relevant, e.g. `scythe clean --older-than 30`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Existing tools, workarounds, or alternative designs.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Type
+      options:
+        - New CLI flag
+        - New ecosystem support
+        - New output format
+        - New command
+        - Other
+    validations:
+      required: true
