@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.3] - 2026-05-02
+
+### Added
+- **`--min-size SIZE` filter** on both `scan` and `clean` commands.
+  Keeps only artifacts at or above the given size threshold, with support
+  for raw bytes as well as human-readable units such as `512KB`, `100MB`,
+  and `1GB`.
+  - Examples:
+    - `scythe scan ~/projects --min-size 500MB`
+    - `scythe clean ~/projects --min-size 1GB --dry-run`
+- `parse_size_threshold` and `filter_projects_by_artifact_size` helpers in
+  `scythe/utils/utils.py`, designed to narrow artifact lists without
+  mutating the original project objects.
+- Targeted tests for size parsing, artifact-size filtering, and CLI
+  behavior on both `scan` and `clean`.
+
+### Changed
+- README usage examples and roadmap notes now document `--min-size` as a
+  shipped advanced filter.
+
+### Technical
+- Release v0.5.3
+
 ## [0.5.2] - 2026-05-02
 
 ### Added

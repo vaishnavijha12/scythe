@@ -24,6 +24,7 @@ from scythe.ui.ui import (
 )
 
 from scythe.formatter.formatter import save_report
+from scythe.utils.utils import format_size, parse_size_threshold
 
 
 def _parse_only_filter(value):
@@ -40,6 +41,16 @@ def _parse_only_filter(value):
         except ValueError as exc:
             raise click.BadParameter(str(exc), param_hint='--only')
     return types or None
+
+
+def _parse_min_size(value):
+    """Parse a human-readable --min-size value into bytes."""
+    if value is None:
+        return None
+    try:
+        return parse_size_threshold(value)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint='--min-size')
 
 
 console = Console()
@@ -147,9 +158,16 @@ def cli(ctx, verbose, no_log_file):
     metavar='DAYS',
     help='Only keep artifacts whose last_modified is older than DAYS days'
 )
+@click.option(
+    '--min-size',
+    type=str,
+    default=None,
+    metavar='SIZE',
+    help='Only keep artifacts at or above SIZE (e.g. 100MB, 1GB, 512KB)'
+)
 
 @click.pass_context
-def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, older_than):
+def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, older_than, min_size):
     """
         Scan the directory
     """
@@ -158,6 +176,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
 
     scan_path = Path(path).resolve()
     only_types = _parse_only_filter(only)
+    min_size_bytes = _parse_min_size(min_size)
 
     logger.info(f"Scanning directory: {path}")
     logger.info(f"Maximal Depth: {depth}")
@@ -190,6 +209,19 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
         result.projects = filter_projects_by_artifact_age(result.projects, older_than)
         logger.info(
             f"--older-than {older_than} filter: kept {len(result.projects)}/{before} projects"
+        )
+
+    if min_size_bytes and min_size_bytes > 0:
+        from scythe.utils.utils import filter_projects_by_artifact_size
+
+        before_projects = len(result.projects)
+        before_artifacts = sum(len(project.artifacts) for project in result.projects)
+        result.projects = filter_projects_by_artifact_size(result.projects, min_size_bytes)
+        after_artifacts = sum(len(project.artifacts) for project in result.projects)
+        logger.info(
+            f"--min-size {format_size(min_size_bytes)} filter: kept "
+            f"{after_artifacts}/{before_artifacts} artifacts across "
+            f"{len(result.projects)}/{before_projects} projects"
         )
 
 
@@ -264,6 +296,13 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     metavar='DAYS',
     help='Only clean artifacts whose last_modified is older than DAYS days'
 )
+@click.option(
+    '--min-size',
+    type=str,
+    default=None,
+    metavar='SIZE',
+    help='Only clean artifacts at or above SIZE (e.g. 100MB, 1GB, 512KB)'
+)
 
 @click.option(
     '--follow-symlinks',
@@ -272,7 +311,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
 )
 
 @click.pass_context
-def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, follow_symlinks):
+def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, min_size, follow_symlinks):
     """
         Clean detected build artifacts.
 
@@ -308,6 +347,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     scan_path = Path(path).resolve()
     only_types = _parse_only_filter(only)
+    min_size_bytes = _parse_min_size(min_size)
 
     console.print("[bold cyan]Step 1/2 : Scanning projects...[/bold cyan]")
 
@@ -345,6 +385,21 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             f"{len(project_with_artifacts)}/{before} projects[/dim]"
         )
 
+    if min_size_bytes and min_size_bytes > 0:
+        from scythe.utils.utils import filter_projects_by_artifact_size
+
+        before_projects = len(project_with_artifacts)
+        before_artifacts = sum(len(project.artifacts) for project in project_with_artifacts)
+        project_with_artifacts = filter_projects_by_artifact_size(
+            project_with_artifacts, min_size_bytes
+        )
+        after_artifacts = sum(len(project.artifacts) for project in project_with_artifacts)
+        console.print(
+            f"[dim]--min-size {format_size(min_size_bytes)} filter: kept "
+            f"{after_artifacts}/{before_artifacts} artifacts across "
+            f"{len(project_with_artifacts)}/{before_projects} projects[/dim]"
+        )
+
     if not project_with_artifacts :
         console.print(
             "\n[yellow]Nothing to clean[/yellow]"
@@ -353,7 +408,6 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     total_artifacts = sum(len(p.artifacts) for p in project_with_artifacts)
     total_size = sum(p.total_artifact_size for p in project_with_artifacts)
-    from scythe.utils.utils import format_size
 
     console.print(
         f"\n[green]✓ Found {len(project_with_artifacts)} projects "

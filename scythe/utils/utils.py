@@ -3,6 +3,7 @@
 """
 
 import os
+import re
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Set, TYPE_CHECKING
@@ -24,6 +25,16 @@ IGNORED_PATTERNS: Set[str] = {
     '*.swo',
     '*~'
 }
+
+
+SIZE_UNITS = {
+    "B": 1,
+    "KB": 1024,
+    "MB": 1024 ** 2,
+    "GB": 1024 ** 3,
+    "TB": 1024 ** 4,
+}
+
 
 def format_size(size_bytes: int) -> str:
     if size_bytes < 0 :
@@ -59,6 +70,30 @@ def calculate_directory_size(path: Path, follow_symlinks: bool = False) -> int:
     return total_size
 
 
+def parse_size_threshold(value: str | None) -> int | None:
+    """
+    Parse a user-supplied size like ``100MB`` or ``1.5GB`` into bytes.
+    Returns ``None`` when the option is unset.
+    """
+    if value is None:
+        return None
+
+    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*([kmgt]?b)?\s*", value, re.IGNORECASE)
+    if not match:
+        raise ValueError(
+            "Invalid size. Use raw bytes or a unit like 100MB, 1GB, or 512KB."
+        )
+
+    amount = float(match.group(1))
+    unit = (match.group(2) or "B").upper()
+    size_bytes = int(amount * SIZE_UNITS[unit])
+
+    if size_bytes < 0:
+        raise ValueError("Size must be positive")
+
+    return size_bytes
+
+
 def filter_projects_by_artifact_age(
     projects: List["Project"],
     min_age_days: int,
@@ -89,6 +124,37 @@ def filter_projects_by_artifact_age(
                 project_type=project.project_type,
                 marker_files=list(project.marker_files),
                 artifacts=old_artifacts,
+                last_scanned=project.last_scanned,
+            )
+        )
+    return result
+
+
+def filter_projects_by_artifact_size(
+    projects: List["Project"],
+    min_size_bytes: int,
+) -> List["Project"]:
+    """
+    Return a new list of Projects whose artifacts are at least
+    ``min_size_bytes`` large. Projects whose every artifact is too small
+    are dropped entirely.
+    """
+    if min_size_bytes <= 0:
+        return list(projects)
+
+    from scythe.models.models import Project
+
+    result: List[Project] = []
+    for project in projects:
+        large_artifacts = [a for a in project.artifacts if a.size_bytes >= min_size_bytes]
+        if not large_artifacts:
+            continue
+        result.append(
+            Project(
+                path=project.path,
+                project_type=project.project_type,
+                marker_files=list(project.marker_files),
+                artifacts=large_artifacts,
                 last_scanned=project.last_scanned,
             )
         )

@@ -3,7 +3,7 @@ Scythe - Command Line Tool for cleaning artifacts and builds
 """
 
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __author__ = "Eliel MENGUE"
 __email__ = "mengueeliel712@gmail.com"
 

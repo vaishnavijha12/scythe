@@ -89,7 +89,7 @@ docker run --rm -v "$PWD":/work ghcr.io/elielmengue/scythe:latest \
     clean /work --dry-run
 ```
 
-Tags follow the PyPI release: `:latest`, `:0.5.2`, `:0.5`, `:0`. The
+Tags follow the PyPI release: `:latest`, `:0.5.3`, `:0.5`, `:0`. The
 rolling `:edge` tag tracks `main`.
 
 ### From source
@@ -109,6 +109,7 @@ scythe scan .                                  # current directory
 scythe scan ~/dev --depth 2                    # bound recursion depth
 scythe scan ~/dev --only node,python           # filter by ecosystem
 scythe scan ~/dev --older-than 30              # only artifacts older than 30 days
+scythe scan ~/dev --min-size 500MB             # only artifacts at or above 500 MB
 scythe scan ~/dev --format tree                # table | tree | compact | json
 scythe scan ~/dev --format json -o report.json # also csv via .csv suffix
 ```
@@ -122,6 +123,7 @@ scythe clean ~/dev --dry-run                   # simulate (always do this first)
 scythe clean ~/dev --interactive               # pick projects manually
 scythe clean ~/dev --only rust                 # only Rust target/ directories
 scythe clean ~/dev --older-than 30 --dry-run   # only target stale artifacts
+scythe clean ~/dev --min-size 1GB --dry-run    # only large artifacts worth deleting
 scythe clean ~/dev --force                     # skip the confirmation prompt
 scythe clean ~/dev -o run-report.json          # export a JSON report
 ```
@@ -199,7 +201,7 @@ invariant of the codebase.
 - [x] Artifact detection
 - [x] Rich-based UI (table / tree / compact / JSON)
 - [x] Cleaning engine (`--dry-run`, `--interactive`, `--force`, JSON report)
-- [x] Advanced features — *in progress* (`--only`, `--older-than` shipped; planned: `--min-size`, `--ignore`, trash-mode)
+- [x] Advanced features — *in progress* (`--only`, `--older-than`, `--min-size` shipped; planned: `--ignore`, trash-mode)
 - [ ] Comprehensive tests & validation
 - [ ] Broader distribution (Homebrew tap, Scoop)
 
