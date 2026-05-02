@@ -31,6 +31,25 @@ scratch directories. None of it is load-bearing — but finding and removing
 it by hand across dozens of project folders is tedious and error-prone.
 `scythe` does it in two commands.
 
+## How does this compare to `npkill` / `kondo` / `cleanpy`?
+
+Existing tools cover one ecosystem each, well. `scythe` covers a
+mixed-stack `~/projects` folder in one workflow.
+
+| Tool       | Ecosystems covered                                | UX                | Filters                              | Reports         | Distribution                |
+|------------|---------------------------------------------------|-------------------|--------------------------------------|-----------------|-----------------------------|
+| `npkill`   | Node only (`node_modules`)                        | Interactive TUI   | Sort by size / age                   | None            | npm                         |
+| `kondo`    | Rust + a handful (Node, JS, Java, Haskell, …)     | Interactive prompt| Older-than                           | None            | Cargo, Homebrew             |
+| `cleanpy`  | Python only                                       | CLI               | Cache types                          | None            | pip                         |
+| **`scythe`** | **Node, Python, Rust, Java (Maven + Gradle), Go, Ruby, .NET** (Swift planned) | CLI today, **TUI mode `scythe ui` planned** | `--only`, `--older-than`, `--min-size` (`--ignore` planned) | **JSON / CSV** export, dry-run report | **pipx**, pip, **Docker** (multi-arch), standalones planned |
+
+When to reach for which:
+- Only have a `node_modules` problem? `npkill` is purpose-built.
+- Mostly Rust? `kondo` is great.
+- Mixed-stack folder, want filters / reports / scripting / CI integration,
+  or you also need to clean Python virtualenvs and Java build dirs in the
+  same pass? That's where `scythe` is meant to live.
+
 ## Quick start
 
 ```bash
@@ -195,36 +214,54 @@ invariant of the codebase.
 
 ## Roadmap
 
-Shipped:
+### Shipped
 - [x] Configuration & foundations
 - [x] Directory scanner
-- [x] Artifact detection (8 ecosystems)
-- [x] Rich-based UI (table / tree / compact / JSON)
+- [x] Artifact detection — 8 ecosystems
+- [x] Rich-based output (table / tree / compact / JSON)
 - [x] Cleaning engine (`--dry-run`, `--interactive`, `--force`, JSON report)
 - [x] Filters: `--only`, `--older-than`, `--min-size`
+- [x] Distribution: PyPI (`pipx`), Docker (multi-arch GHCR)
 
-Next up:
-- [ ] **Trash-mode + recovery** — `scythe clean --trash` moves artifacts to the
-      OS trash (Recycle Bin / `~/.Trash` / XDG `Trash`) instead of unlinking,
-      and `scythe restore` brings the most recent run back. Removes the
-      "deletion is permanent" footgun.
-- [ ] **Standalone binaries** — single-file executables published on GitHub
-      Releases for users who don't have Python:
+### Safety & UX
+
+- [ ] **Trash-mode + `scythe restore`** — `scythe clean --trash` moves
+      artifacts to the OS trash (Recycle Bin on Windows, `~/.Trash` on
+      macOS, XDG `Trash` on Linux) instead of unlinking. A new
+      `scythe restore` command rehydrates the most recent run. Removes
+      the "deletion is permanent" footgun.
+- [ ] **`scythe ui` — interactive TUI mode** (Textual) — full-screen
+      browse-and-clean experience: filterable project list, expandable
+      artifact tree per project, live total-size readout, item-level
+      toggles, and an undo stack that pairs naturally with trash-mode.
+      The CLI stays for scripts and CI; the TUI is for exploration.
+
+### Filters & customization
+
+- [ ] **`--ignore PATTERN`** — extra ignore patterns on top of the
+      built-in defaults (e.g. `--ignore "*.archive,~/projects/keepme"`).
+- [ ] **Config file** — `pyproject.toml [tool.scythe]` and/or
+      `~/.scytherc` to persist `--only` / `--ignore` / depth defaults
+      per machine.
+
+### Distribution & polish
+
+- [ ] **Standalone binaries** on GitHub Releases for users without Python:
   - macOS — Apple Silicon (`arm64`) and Intel (`x86_64`)
   - Linux — `x86_64` and `arm64` (glibc); musl/static build for Alpine
   - Windows — `x86_64` (`.exe`)
   - Optional: FreeBSD `x86_64`
-- [ ] **Package-manager distribution** — Homebrew tap, Scoop bucket, winget,
-      and an AUR package.
-- [ ] **`--ignore PATTERN`** — extra ignore patterns layered on top of the
-      built-in defaults.
+- [ ] **Package-manager distribution** — Homebrew tap, Scoop bucket,
+      winget manifest, and an AUR package.
 - [ ] **Shell completions** — `scythe completion {bash,zsh,fish,powershell}`.
-- [ ] **Config file** — `pyproject.toml [tool.scythe]` and/or `~/.scytherc`
-      to persist `--only` / `--ignore` / depth defaults per machine.
-- [ ] **Lifetime stats** — track total space reclaimed across runs and show
-      it in `scythe info`.
-- [ ] **Comprehensive tests & validation** — broader scanner/cleaner
-      integration coverage.
+
+### Telemetry & quality
+
+- [ ] **Lifetime stats** — track total space reclaimed across runs and
+      surface it in `scythe info`.
+- [ ] **Comprehensive integration tests** — broader scanner/cleaner
+      coverage (large directory trees, permission edge cases,
+      symlink loops).
 
 See [CHANGELOG.md](CHANGELOG.md) for the release history.
 

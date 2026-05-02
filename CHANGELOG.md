@@ -2,23 +2,36 @@
 
 ## [Unreleased]
 
-### Planned
-- **Trash-mode + recovery**: `scythe clean --trash` will move artifacts to the
-  OS trash (Recycle Bin on Windows, `~/.Trash` on macOS, XDG `Trash` on
-  Linux) instead of unlinking, and a new `scythe restore` command will
-  re-hydrate the most recent run. This removes the current "deletion is
-  permanent" footgun.
-- **Standalone binaries** on GitHub Releases for users who don't have
-  Python:
+### Planned — Safety & UX
+- **Trash-mode + `scythe restore`**: `scythe clean --trash` will move
+  artifacts to the OS trash (Recycle Bin on Windows, `~/.Trash` on macOS,
+  XDG `Trash` on Linux) instead of unlinking, and a new `scythe restore`
+  command will rehydrate the most recent run. Removes the current
+  "deletion is permanent" footgun.
+- **`scythe ui` — interactive TUI mode** (Textual): full-screen
+  browse-and-clean experience with a filterable project list, expandable
+  artifact tree, live total-size readout, item-level toggles, and an
+  undo stack that pairs with trash-mode. The CLI stays for scripts/CI;
+  the TUI is for exploration.
+
+### Planned — Filters & customization
+- **`--ignore PATTERN`**: extra ignore patterns on top of the built-in
+  defaults.
+- **Config file**: `pyproject.toml [tool.scythe]` and/or `~/.scytherc`
+  for persistent defaults.
+
+### Planned — Distribution & polish
+- **Standalone binaries** on GitHub Releases for users without Python:
   - macOS (`arm64` + `x86_64`)
   - Linux (`x86_64` glibc, `x86_64` musl static, `arm64`)
   - Windows (`x86_64` `.exe`)
 - **Package-manager distribution**: Homebrew tap, Scoop bucket, winget
   manifest, AUR.
-- **`--ignore PATTERN`** filter and shell completions
-  (`scythe completion {bash,zsh,fish,powershell}`).
-- **Config file** support (`pyproject.toml [tool.scythe]` and/or
-  `~/.scytherc`) for persistent defaults.
+- **Shell completions**: `scythe completion {bash,zsh,fish,powershell}`.
+
+### Planned — Telemetry & quality
+- **Lifetime stats** surfaced in `scythe info`.
+- **Comprehensive integration tests** for scanner/cleaner edge cases.
 
 ## [0.5.3] - 2026-05-02
 
