@@ -562,6 +562,131 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
 
 @cli.command()
+@click.argument('run_id', required=False, default=None, metavar='[RUN_ID]')
+@click.option(
+    '--list', 'list_only',
+    is_flag=True,
+    help='List recoverable runs and exit, without restoring anything.'
+)
+@click.pass_context
+def restore(ctx, run_id, list_only):
+    """
+        Restore a previous `clean --trash` run.
+
+        Without arguments, restores the most recent run. Pass a RUN_ID
+        (visible in the output of the original clean, or via
+        `scythe restore --list`) to target a specific run.
+
+        \b
+        Examples:
+            scythe restore --list                # show available runs
+            scythe restore                       # undo the most recent --trash run
+            scythe restore 20260502-153000-123456  # undo a specific run
+
+        \b
+        Notes:
+            • Only runs created with `scythe clean --trash` are recoverable.
+            • An item is skipped (not failed) when its destination path
+              already exists or its trash payload has been removed.
+    """
+    console = ctx.obj["console"]
+    logger = ctx.obj["logger"]
+
+    from scythe.trash import list_runs, load_manifest, restore_run
+    from scythe.utils.utils import format_size
+
+    runs = list_runs()
+
+    if list_only:
+        if not runs:
+            console.print("[yellow]No recoverable runs found.[/yellow]")
+            return
+
+        table = Table(title="Recoverable runs", box=box.ROUNDED)
+        table.add_column("Run ID", style="cyan")
+        table.add_column("Date", style="white")
+        table.add_column("Items", justify="right")
+        table.add_column("Size", justify="right", style="green")
+        table.add_column("Restored?", justify="center")
+
+        for manifest_path in runs:
+            data = load_manifest(manifest_path)
+            items = data.get("items", [])
+            total = sum(item.get("size_bytes", 0) for item in items)
+            restored = "[green]✓[/green]" if data.get("restored_at") else "[dim]—[/dim]"
+            table.add_row(
+                data["run_id"],
+                data.get("started_at", "?"),
+                str(len(items)),
+                format_size(total),
+                restored,
+            )
+        console.print(table)
+        return
+
+    if not runs:
+        console.print(
+            "[yellow]No recoverable runs found.[/yellow] "
+            "Did you run [bold]scythe clean --trash[/bold]?"
+        )
+        return
+
+    if run_id:
+        manifest_path = next(
+            (p for p in runs if p.stem == run_id),
+            None,
+        )
+        if manifest_path is None:
+            console.print(f"[red]No run with id [bold]{run_id}[/bold] found.[/red]")
+            console.print("[dim]List available runs with [bold]scythe restore --list[/bold].[/dim]")
+            ctx.exit(1)
+    else:
+        manifest_path = runs[0]
+
+    data = load_manifest(manifest_path)
+    if data.get("restored_at"):
+        console.print(
+            f"[yellow]Run [bold]{data['run_id']}[/bold] was already restored "
+            f"on {data['restored_at']}.[/yellow]"
+        )
+        return
+
+    items = data.get("items", [])
+    total = sum(item.get("size_bytes", 0) for item in items)
+    console.print(
+        f"\n[bold cyan]Restoring run {data['run_id']}[/bold cyan] — "
+        f"{len(items)} items ({format_size(total)})"
+    )
+    if data.get("scan_path"):
+        console.print(f"[dim]original scan path: {data['scan_path']}[/dim]")
+
+    summary = restore_run(manifest_path)
+
+    result_table = Table(title="Restore results", box=box.ROUNDED)
+    result_table.add_column("Metric", style="cyan")
+    result_table.add_column("Value", justify="right", style="green")
+    result_table.add_row("Restored", str(len(summary["restored"])))
+    if summary["skipped"]:
+        result_table.add_row("Skipped", f"[yellow]{len(summary['skipped'])}[/yellow]")
+    if summary["errors"]:
+        result_table.add_row("Errors", f"[red]{len(summary['errors'])}[/red]")
+    console.print(result_table)
+
+    if summary["skipped"]:
+        console.print("\n[bold yellow]Skipped:[/bold yellow]")
+        for entry in summary["skipped"][:10]:
+            console.print(f"  [yellow]•[/yellow] {entry['path']} — {entry['reason']}")
+        if len(summary["skipped"]) > 10:
+            console.print(f"  [dim]... and {len(summary['skipped']) - 10} more[/dim]")
+
+    if summary["errors"]:
+        console.print("\n[bold red]Errors:[/bold red]")
+        for entry in summary["errors"][:10]:
+            console.print(f"  [red]•[/red] {entry['path']} — {entry['error']}")
+        ctx.exit(1)
+
+
+@cli.command()
 @click.pass_context
 def info(ctx):
     console = ctx.obj["console"]

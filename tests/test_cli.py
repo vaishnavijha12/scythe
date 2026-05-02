@@ -171,6 +171,87 @@ def test_clean_trash_flag_routes_through_trash_mover(monkeypatch, tmp_path):
     assert manifest["scan_path"] == str(project_dir)
 
 
+def test_restore_list_when_no_runs(monkeypatch, tmp_path):
+    monkeypatch.setattr("scythe.trash.trash.get_trash_root", lambda: tmp_path / "scythe-data")
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-restore-empty"))
+
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "restore", "--list"],
+        catch_exceptions=False,
+    )
+    assert invoke.exit_code == 0
+    assert "No recoverable runs" in invoke.output
+
+
+def test_restore_default_undoes_most_recent_run(monkeypatch, tmp_path):
+    """E2E: --trash → restore (no args) brings everything back."""
+    project_dir = tmp_path / "demo"
+    artifact_dir = project_dir / "node_modules"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "package.json").write_text('{"hello":1}')
+
+    artifact = ArtifactInfo(
+        path=artifact_dir,
+        size_bytes=11,
+        last_modified=datetime(2026, 5, 2),
+        artifact_type="node_modules",
+    )
+    project = Project(
+        path=project_dir,
+        project_type=ProjectType.NODE,
+        marker_files=["package.json"],
+        artifacts=[artifact],
+    )
+    scan_result = ScanResult(root_path=project_dir, projects=[project])
+
+    trash_root = tmp_path / "scythe-data"
+    monkeypatch.setattr("scythe.trash.trash.get_trash_root", lambda: trash_root)
+    monkeypatch.setattr(cli_module, "progress_bar", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-restore"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    runner = CliRunner()
+
+    clean_invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "clean", str(project_dir), "--trash", "--force"],
+        catch_exceptions=False,
+    )
+    assert clean_invoke.exit_code == 0, clean_invoke.output
+    assert not artifact_dir.exists()
+
+    restore_invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "restore"],
+        catch_exceptions=False,
+    )
+    assert restore_invoke.exit_code == 0, restore_invoke.output
+    assert artifact_dir.exists()
+    assert (artifact_dir / "package.json").read_text() == '{"hello":1}'
+
+
+def test_restore_unknown_run_id_exits_nonzero(monkeypatch, tmp_path):
+    trash_root = tmp_path / "scythe-data"
+    (trash_root / "runs").mkdir(parents=True)
+    # write a manifest so the "no runs" branch isn't hit
+    (trash_root / "runs" / "20260101-000000-000000.json").write_text(
+        '{"run_id": "20260101-000000-000000", "items": [], "started_at": "2026-01-01T00:00:00"}'
+    )
+    monkeypatch.setattr("scythe.trash.trash.get_trash_root", lambda: trash_root)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-restore-unknown"))
+
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "restore", "nope-not-a-real-id"],
+        catch_exceptions=False,
+    )
+    assert invoke.exit_code == 1
+    assert "No run with id" in invoke.output
+
+
 def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
     """--dry-run + --trash should NOT create a trash dir or manifest."""
     project_dir = tmp_path / "demo"
