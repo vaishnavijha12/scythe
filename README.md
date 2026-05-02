@@ -9,7 +9,7 @@
 
 ![Artifact-Scythe](https://eliel-mengue.vercel.app/images/scythe.png)
 
-![Demo](demo/demo.gif)
+![Demo](demo/demo.mp4)
 
 `scythe` is a Python CLI that walks your projects directory, identifies each
 project's ecosystem (Node, Python, Rust, Java, Go, Ruby, .NET) from its
