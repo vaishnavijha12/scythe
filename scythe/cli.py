@@ -24,6 +24,8 @@ from scythe.ui.ui import (
     display_clean_plan,
     display_clean_footer,
     progress_bar,
+    scan_progress,
+    clean_progress,
     interactive_select_project,
     confirm_action,
 )
@@ -199,11 +201,22 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
             },
         )
 
-    with progress_bar() as progress:
+    with scan_progress() as progress:
         task = progress.add_task("[cyan]Scanning...", total=None)
+        counter = {"dirs": 0}
 
         def update_progress(message: str):
-            progress.update(task, description=f"[cyan]{message}")
+            counter["dirs"] += 1
+            current = message.removeprefix("Scanning ").strip()
+            tail = current[-50:] if len(current) > 50 else current
+            progress.update(
+                task,
+                description=(
+                    f"[cyan]Scanning[/cyan] "
+                    f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
+                    f"[dim]· {tail}[/dim]"
+                ),
+            )
 
         result = scan_directory(
             path=scan_path,
@@ -390,11 +403,22 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         },
     )
 
-    with progress_bar() as progress:
+    with scan_progress() as progress:
         task = progress.add_task("[cyan]Scanning...", total=None)
+        counter = {"dirs": 0}
 
         def update_progress(message: str) :
-            progress.update(task, description=f"[cyan]{message}")
+            counter["dirs"] += 1
+            current = message.removeprefix("Scanning ").strip()
+            tail = current[-50:] if len(current) > 50 else current
+            progress.update(
+                task,
+                description=(
+                    f"[cyan]Scanning[/cyan] "
+                    f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
+                    f"[dim]· {tail}[/dim]"
+                ),
+            )
 
         scan_result = scan_directory(
             path=scan_path,
@@ -490,12 +514,21 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             f"Trash mode active — artifacts will be moved under {trash_mover.trash_dir}"
         )
 
-    with progress_bar() as progress:
-        task = progress.add_task("[cyan]Cleaning...")
-        total = len(selected_projects)
+    total = len(selected_projects)
+    with clean_progress() as progress:
+        task = progress.add_task("[cyan]Cleaning...", total=total)
 
         def update_clean_progress(message: str) :
-            progress.update(task, advance=1, description=f"[cyan]{message}")
+            current = message.removeprefix("Cleaning ").strip()
+            tail = current[-40:] if len(current) > 40 else current
+            progress.update(
+                task,
+                advance=1,
+                description=(
+                    f"[cyan]Cleaning[/cyan] "
+                    f"[dim]· {tail}[/dim]"
+                ),
+            )
 
         clean_result = clean_artifacts(
             selected_projects,

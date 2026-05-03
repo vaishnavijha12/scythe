@@ -408,7 +408,7 @@ def display_summary_panel(
 
 
 def progress_bar(description: str = "Processing ...") -> Progress:
-
+    """Generic indeterminate progress bar (kept for backward compatibility)."""
     return Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -416,4 +416,28 @@ def progress_bar(description: str = "Processing ...") -> Progress:
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TimeElapsedColumn(),
         console=console
+    )
+
+
+def scan_progress() -> Progress:
+    """Indeterminate spinner-style progress for scan: spinner · description · elapsed."""
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    )
+
+
+def clean_progress() -> Progress:
+    """Determinate progress for clean: spinner · description · bar · count · elapsed."""
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(bar_width=None),
+        TextColumn("[progress.completed]{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
     )
