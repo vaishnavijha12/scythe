@@ -1,5 +1,5 @@
 """
-Bannière et éléments visuels pour Artifact-Scythe
+Banner and visual elements for Artifact-Scythe.
 """
 
 from rich.console import Console

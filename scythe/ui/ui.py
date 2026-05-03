@@ -1,5 +1,5 @@
 """
-    USER INTERFACE INTERFACE
+    User interface helpers for rendering scan/clean output.
 """
 from pathlib import Path
 from typing import List
@@ -31,11 +31,11 @@ def display_scan_result(
     """
 
     console.print()
-    console.print(f"[bold green]✓ Scand ends in {result.scan_duration:.2f}s[/bold green]")
+    console.print(f"[bold green]✓ Scan completed in {result.scan_duration:.2f}s[/bold green]")
     console.print()
 
     if result.total_projects == 0 :
-        console.print("[yellow] No projects found. [/yellow]")
+        console.print("[yellow]No projects found.[/yellow]")
         return
 
     if format == "tree" :
@@ -135,7 +135,7 @@ def display_tree_view(result: ScanResult, scan_path: Path) -> None:
 
 
 def display_compact_view(result: ScanResult, scan_path: Path) -> None:
-    console.print("[bold cyan] Project detected : [/bold cyan]")
+    console.print("[bold cyan]Projects detected:[/bold cyan]")
     console.print()
 
     for i, project in enumerate(result.projects, 1) :
@@ -163,7 +163,7 @@ def display_statistics(result: ScanResult) -> None:
     stats_table.add_column("Metric", style="cyan")
     stats_table.add_column("Value", style="green")
 
-    stats_table.add_row("Directories Scanned", str(result.directories_scanned))
+    stats_table.add_row("Directories scanned", str(result.directories_scanned))
     stats_table.add_row("Files scanned", str(result.files_scanned))
     stats_table.add_row("Projects detected", str(result.total_projects))
     stats_table.add_row("Artifacts found", str(sum(p.artifact_count for p in result.projects)))
@@ -190,13 +190,13 @@ def display_statistics(result: ScanResult) -> None:
 """
 def display_errors(errors: List[str], max_display: int = 5 ) -> None:
     console.print()
-    console.print("[bold red] Errors that occurs : [/bold red]")
+    console.print("[bold red]Errors:[/bold red]")
 
     for error in errors :
         console.print(f"  [red]•[/red] {error}")
 
     if len(errors) > max_display:
-        console.print(f" [dim] ... and {len(errors) -max_display} others [/dim]")
+        console.print(f"  [dim]... and {len(errors) - max_display} more[/dim]")
 
 
 def interactive_select_project(
@@ -209,20 +209,19 @@ def interactive_select_project(
     """
 
     if not projects :
-        console.print("[yellow] Nothing to select [/yellow]")
+        console.print("[yellow]Nothing to select.[/yellow]")
         return []
 
     console.print()
-    console.print("[bold cyan] Interactive mode - Select project [/bold cyan]")
-    console.print("[dim] Enter project number id or select all [/dim]")
+    console.print("[bold cyan]Interactive mode — select projects to clean[/bold cyan]")
+    console.print("[dim]Enter project numbers (e.g. 1,3-5) or 'all'.[/dim]")
 
-    #selection table
     table = Table(box=box.SIMPLE)
     table.add_column("№", style="cyan", justify="right")
     table.add_column("Type", style="cyan")
-    table.add_column("Chemin", style="white")
-    table.add_column("Artefacts", style="yellow", justify="right")
-    table.add_column("Taille", style="green", justify="right")
+    table.add_column("Path", style="white")
+    table.add_column("Artifacts", style="yellow", justify="right")
+    table.add_column("Size", style="green", justify="right")
 
     for i, project in enumerate(projects, 1) :
         try:
@@ -246,7 +245,7 @@ def interactive_select_project(
 
     while True :
         selection = Prompt.ask(
-            "[bold cyan] Selection [/bold cyan]",
+            "[bold cyan]Selection[/bold cyan]",
             default="all"
         )
 
@@ -259,13 +258,13 @@ def interactive_select_project(
 
             console.print()
             console.print(
-                f"[yellow]→ {len(selected_projects)} selected projects "
+                f"[yellow]→ {len(selected_projects)} project(s) selected "
                 f"({format_size(total_size)} to free)[/yellow]"
             )
 
             return selected_projects
         except ValueError as e :
-            console.print(f"[red]invalid selection: {e}[/red]")
+            console.print(f"[red]Invalid selection: {e}[/red]")
             continue
 
 

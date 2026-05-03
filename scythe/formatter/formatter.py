@@ -77,7 +77,7 @@ def save_report(
     elif format == "csv":
         content = format_to_csv(result)
     else:
-        raise ValueError(f"Format non supporté: {format}")
+        raise ValueError(f"Unsupported format: {format}")
 
     output_path.write_text(content, encoding='utf-8')
 

@@ -187,7 +187,6 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
         def update_progress(message: str):
             progress.update(task, description=f"[cyan]{message}")
 
-        # Lancer le scan
         result = scan_directory(
             path=scan_path,
             max_depth=depth,
@@ -358,7 +357,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     only_types = _parse_only_filter(only)
     min_size_bytes = _parse_min_size(min_size)
 
-    console.print("[bold cyan]Step 1/2 : Scanning projects...[/bold cyan]")
+    console.print("[bold cyan]Step 1/2: Scanning projects...[/bold cyan]")
 
     with progress_bar() as progress:
         task = progress.add_task("[cyan]Scanning...", total=None)
@@ -438,21 +437,21 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         total_selected_artifacts = sum(len(p.artifacts) for p in selected_projects)
 
         if not confirm_action(
-             "Confirm deletion ?",
-            f"{total_selected_artifacts} artifacts - {format_size(total_selected_size)} will be deleted",
+            "Confirm deletion?",
+            f"{total_selected_artifacts} artifacts ({format_size(total_selected_size)}) will be deleted",
             default=False
         ) :
             console.print(
-                "[yellow]Action canceled[/yellow]"
+                "[yellow]Action canceled.[/yellow]"
             )
             return
 
     console.print(
-        "\n[bold cyan]Step 2/2 : Cleaning ...[/bold cyan]"
+        "\n[bold cyan]Step 2/2: Cleaning...[/bold cyan]"
     )
 
     if dry_run :
-        console.print("[yellow]DRY-RUN enabled - simulation, no data is deleted[/yellow]\n")
+        console.print("[yellow]DRY-RUN — nothing will actually be deleted.[/yellow]\n")
 
     trash_mover = None
     manifest_path = None
@@ -507,7 +506,7 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     else :
         console.print(
-            f"[bold green]✓ Cleaning end in {clean_result.clean_duration:.2f}s[/bold green]"
+            f"[bold green]✓ Cleaning completed in {clean_result.clean_duration:.2f}s[/bold green]"
         )
 
     console.print()
@@ -532,12 +531,12 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     if clean_result.errors:
         console.print()
-        console.print(f"[bold red] Errors : [/bold red]")
+        console.print("[bold red]Errors:[/bold red]")
         for error in clean_result.errors[:5]:
             console.print(f"  [red]•[/red] {error}")
 
         if len(clean_result.errors) > 5:
-            console.print(f"  [dim]... and {len(clean_result.errors) - 5} others[/dim]")
+            console.print(f"  [dim]... and {len(clean_result.errors) - 5} more[/dim]")
 
     report = {
         "clean_date": datetime.now().isoformat(),
@@ -715,8 +714,8 @@ def info(ctx):
     console.print(Panel(info_text, title="Guide", border_style="cyan"))
 def display_header():
     header = """
-    [bold red] SCYTHE[/bold red]
-    [yellow] Free your dir in few second [/yellow]
+    [bold red]SCYTHE[/bold red]
+    [yellow]Reclaim disk space in seconds.[/yellow]
     """
 
     console.print(Panel(header, border_style="red"))
