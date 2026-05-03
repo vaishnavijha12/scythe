@@ -2,6 +2,37 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-05-03
+
+### Changed
+- **Console rendering for `scan` and `clean` rebuilt around a shared
+  template**: a context header (command + path + active filter chips),
+  a one-line headline (`Found N project(s) · X.YZ GB reclaimable`),
+  the projects body (lighter table with header rule only, no
+  surrounding box), and a one-line dim footer with stats. The
+  standalone "Statistics" and "Cleaning results" tables are gone —
+  their content collapses into the new footers. Filter feedback
+  (`--only`, `--older-than`, `--min-size`) is no longer printed
+  between the progress bar and the headline; it's logged at INFO.
+
+### Added
+- **Live counters in the scan/clean progress bar**:
+  - Scan: `Scanning N dirs · <truncated current path>` updates per
+    directory walked, on a transient indeterminate spinner.
+  - Clean: determinate progress with `M/N` projects, bar, and
+    elapsed time, also transient.
+  Both bars erase themselves on completion so the final headline is
+  the focal point.
+
+### Fixed
+- Residual French strings purged from console output (banner
+  docstring, formatter error message, interactive-selection table
+  columns, several test docstrings) and a handful of typos
+  (`Scand ends in` → `Scan completed in`, `Cleaning end in` →
+  `Cleaning completed in`, `Errors that occurs` → `Errors`).
+- French-style spacing before `:` and `?` removed throughout user-
+  facing strings.
+
 ### Planned — Safety & UX
 - **`scythe ui` — interactive TUI mode** (Textual): full-screen
   browse-and-clean experience with a filterable project list, expandable

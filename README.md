@@ -107,7 +107,7 @@ docker run --rm -v "$PWD":/work ghcr.io/elielmengue/scythe:latest \
     clean /work --dry-run
 ```
 
-Tags follow the PyPI release: `:latest`, `:0.5.3`, `:0.5`, `:0`. The
+Tags follow the PyPI release: `:latest`, `:0.6.1`, `:0.6`, `:0`. The
 rolling `:edge` tag tracks `main`.
 
 ### From source
