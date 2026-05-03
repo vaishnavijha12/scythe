@@ -20,7 +20,12 @@ from scythe.scanner.scanner import scan_directory
 from scythe.cleaner.cleaner import clean_artifacts
 from scythe.ui.ui import (
     display_scan_result,
-    progress_bar, interactive_select_project, confirm_action
+    display_run_header,
+    display_clean_plan,
+    display_clean_footer,
+    progress_bar,
+    interactive_select_project,
+    confirm_action,
 )
 
 from scythe.formatter.formatter import save_report
@@ -180,6 +185,19 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
 
     logger.info(f"Scanning directory: {path}")
     logger.info(f"Maximal Depth: {depth}")
+
+    if format != 'json':
+        display_run_header(
+            command="scan",
+            path=scan_path,
+            filters={
+                "depth": depth if depth >= 0 else None,
+                "follow-symlinks": "yes" if follow_symlinks else None,
+                "only": ", ".join(t.display_name for t in only_types) if only_types else None,
+                "older-than": f"{older_than}d" if older_than and older_than > 0 else None,
+                "min-size": format_size(min_size_bytes) if min_size_bytes else None,
+            },
+        )
 
     with progress_bar() as progress:
         task = progress.add_task("[cyan]Scanning...", total=None)
@@ -357,7 +375,20 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     only_types = _parse_only_filter(only)
     min_size_bytes = _parse_min_size(min_size)
 
-    console.print("[bold cyan]Step 1/2: Scanning projects...[/bold cyan]")
+    mode_chip = "dry-run" if dry_run else ("trash" if trash else "permanent")
+    display_run_header(
+        command="clean",
+        path=scan_path,
+        filters={
+            "mode": mode_chip,
+            "depth": depth if depth >= 0 else None,
+            "follow-symlinks": "yes" if follow_symlinks else None,
+            "only": ", ".join(t.display_name for t in only_types) if only_types else None,
+            "older-than": f"{older_than}d" if older_than and older_than > 0 else None,
+            "min-size": format_size(min_size_bytes) if min_size_bytes else None,
+            "interactive": "yes" if interactive else None,
+        },
+    )
 
     with progress_bar() as progress:
         task = progress.add_task("[cyan]Scanning...", total=None)
@@ -377,9 +408,9 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     if only_types:
         before = len(project_with_artifacts)
         project_with_artifacts = [p for p in project_with_artifacts if p.project_type in only_types]
-        console.print(
-            f"[dim]--only filter: kept {len(project_with_artifacts)}/{before} projects "
-            f"({', '.join(t.display_name for t in only_types)})[/dim]"
+        logger.info(
+            f"--only filter: kept {len(project_with_artifacts)}/{before} projects "
+            f"({', '.join(t.display_name for t in only_types)})"
         )
 
     if older_than and older_than > 0:
@@ -388,9 +419,9 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         project_with_artifacts = filter_projects_by_artifact_age(
             project_with_artifacts, older_than
         )
-        console.print(
-            f"[dim]--older-than {older_than} filter: kept "
-            f"{len(project_with_artifacts)}/{before} projects[/dim]"
+        logger.info(
+            f"--older-than {older_than} filter: kept "
+            f"{len(project_with_artifacts)}/{before} projects"
         )
 
     if min_size_bytes:
@@ -402,31 +433,34 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             project_with_artifacts, min_size_bytes
         )
         after_artifacts = sum(len(project.artifacts) for project in project_with_artifacts)
-        console.print(
-            f"[dim]--min-size {format_size(min_size_bytes)} filter: kept "
+        logger.info(
+            f"--min-size {format_size(min_size_bytes)} filter: kept "
             f"{after_artifacts}/{before_artifacts} artifacts across "
-            f"{len(project_with_artifacts)}/{before_projects} projects[/dim]"
+            f"{len(project_with_artifacts)}/{before_projects} projects"
         )
 
     if not project_with_artifacts :
         console.print(
-            "\n[yellow]Nothing to clean[/yellow]"
+            "\n[yellow]Nothing to clean.[/yellow]"
         )
         return
 
     total_artifacts = sum(len(p.artifacts) for p in project_with_artifacts)
     total_size = sum(p.total_artifact_size for p in project_with_artifacts)
 
-    console.print(
-        f"\n[green]✓ Found {len(project_with_artifacts)} projects "
-        f"with {total_artifacts} artifacts ({format_size(total_size)})[/green]"
+    display_clean_plan(
+        project_with_artifacts,
+        total_size_formatted=format_size(total_size),
+        total_artifacts=total_artifacts,
+        trash=trash,
+        dry_run=dry_run,
     )
 
     if interactive :
         selected_projects = interactive_select_project(project_with_artifacts, scan_path)
         if not selected_projects :
             console.print(
-                "[yellow]Nothing found[/yellow]"
+                "[yellow]Nothing selected.[/yellow]"
             )
             return
     else :
@@ -446,23 +480,14 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             )
             return
 
-    console.print(
-        "\n[bold cyan]Step 2/2: Cleaning...[/bold cyan]"
-    )
-
-    if dry_run :
-        console.print("[yellow]DRY-RUN — nothing will actually be deleted.[/yellow]\n")
-
     trash_mover = None
     manifest_path = None
     if trash and not dry_run:
         from scythe.trash import TrashMover
 
         trash_mover = TrashMover()
-        console.print(
-            f"[cyan]TRASH mode enabled — artifacts will be moved to "
-            f"{trash_mover.trash_dir} and recoverable via "
-            f"[bold]scythe restore[/bold][/cyan]\n"
+        logger.info(
+            f"Trash mode active — artifacts will be moved under {trash_mover.trash_dir}"
         )
 
     with progress_bar() as progress:
@@ -482,52 +507,22 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     if trash_mover is not None:
         manifest_path = trash_mover.finalize(scan_path=scan_path)
 
+    display_clean_footer(
+        artifacts_deleted=clean_result.artifacts_deleted,
+        artifacts_total=total_artifacts,
+        space_freed_formatted=clean_result.space_freed_formatted,
+        duration=clean_result.clean_duration,
+        dry_run=dry_run,
+        trashed=trash_mover is not None,
+        skipped=len(clean_result.skipped),
+        errors=len(clean_result.errors),
+    )
 
-    console.print()
-    if dry_run:
-        console.print(
-            f"[bold green]✓ [DRY-RUN] {clean_result.artifacts_deleted} artifacts "
-            f"could be deleted ({clean_result.space_freed_formatted})[/bold green]"
-        )
-
-    elif trash_mover is not None:
-        console.print(
-            f"[bold green]✓ Trashed {clean_result.artifacts_deleted} artifacts "
-            f"({clean_result.space_freed_formatted}) in {clean_result.clean_duration:.2f}s[/bold green]"
-        )
+    if trash_mover is not None:
         console.print(
             f"[dim]Run id: [bold]{trash_mover.run_id}[/bold] · "
-            f"manifest: {manifest_path}[/dim]"
+            f"undo with [bold]scythe restore[/bold][/dim]"
         )
-        console.print(
-            "[dim]Undo with: [bold]scythe restore[/bold] "
-            "(or [bold]scythe restore " + trash_mover.run_id + "[/bold])[/dim]"
-        )
-
-    else :
-        console.print(
-            f"[bold green]✓ Cleaning completed in {clean_result.clean_duration:.2f}s[/bold green]"
-        )
-
-    console.print()
-
-    result_table = Table(title="Cleaning results", box=box.ROUNDED)
-    result_table.add_column("Metrics", style="cyan")
-    result_table.add_column("Value", style="green", justify="right")
-
-    result_table.add_row("Cleaned projects", str(len(clean_result.projects_cleaned)))
-    result_table.add_row("Artifacts deleted", str(clean_result.artifacts_deleted))
-    result_table.add_row("Freed memory", clean_result.space_freed_formatted)
-    result_table.add_row("Operation success rate",  f"{clean_result.success_rate:.1f}%")
-
-    if clean_result.skipped :
-        result_table.add_row("Ignored",  f"[yellow]{len(clean_result.skipped)}[/yellow]")
-
-    if clean_result.errors :
-        result_table.add_row("Errors",  f"[red]{len(clean_result.errors)}[/red]")
-
-    console.print(result_table)
-
 
     if clean_result.errors:
         console.print()
