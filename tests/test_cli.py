@@ -327,6 +327,93 @@ def test_clean_json_suffix_writes_json(monkeypatch, tmp_path):
     assert payload["projects"][0]["space_freed_bytes"] == 2 * 1024 * 1024 + 512
 
 
+def test_quiet_scan_suppresses_decorative_output(monkeypatch, tmp_path):
+    """--quiet should drop progress bars, run header and result table for scan."""
+    scan_result = ScanResult(
+        root_path=tmp_path,
+        projects=[_project_with_small_and_large_artifacts(tmp_path)],
+    )
+
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-quiet-scan"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    def _fail(*_args, **_kwargs):
+        raise AssertionError("decorative helper called in --quiet mode")
+
+    monkeypatch.setattr(cli_module, "display_run_header", _fail)
+    monkeypatch.setattr(cli_module, "display_scan_result", _fail)
+    monkeypatch.setattr(cli_module, "scan_progress", _fail)
+
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "--quiet", "scan", str(tmp_path)],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+
+
+def test_quiet_scan_still_writes_output_file(monkeypatch, tmp_path):
+    """--quiet must not break --output: the report file is still written."""
+    scan_result = ScanResult(
+        root_path=tmp_path,
+        projects=[_project_with_small_and_large_artifacts(tmp_path)],
+    )
+
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-quiet-output"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    report_path = tmp_path / "scan.json"
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "--quiet", "scan", str(tmp_path), "-o", str(report_path)],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+    assert report_path.exists()
+    # No "report saved" decorative line in quiet mode.
+    assert "report is saved" not in invoke.output.lower()
+
+
+def test_quiet_clean_suppresses_decorative_output(monkeypatch, tmp_path):
+    """--quiet on clean drops headers, plan, footer; --output still works."""
+    project = _project_with_small_and_large_artifacts(tmp_path)
+    for artifact in project.artifacts:
+        artifact.path.mkdir(parents=True, exist_ok=True)
+    scan_result = ScanResult(root_path=tmp_path, projects=[project])
+
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-quiet-clean"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    def _fail(*_args, **_kwargs):
+        raise AssertionError("decorative helper called in --quiet mode")
+
+    monkeypatch.setattr(cli_module, "display_run_header", _fail)
+    monkeypatch.setattr(cli_module, "display_clean_plan", _fail)
+    monkeypatch.setattr(cli_module, "display_clean_footer", _fail)
+    monkeypatch.setattr(cli_module, "scan_progress", _fail)
+    monkeypatch.setattr(cli_module, "clean_progress", _fail)
+
+    report_path = tmp_path / "clean.json"
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        [
+            "--no-log-file", "--quiet",
+            "clean", str(tmp_path),
+            "--dry-run", "--force",
+            "-o", str(report_path),
+        ],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+    assert report_path.exists()
+
+
 def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
     """--dry-run + --trash should NOT create a trash dir or manifest."""
     project_dir = tmp_path / "demo"
