@@ -74,8 +74,13 @@ console = Console()
     is_flag=True,
     help='Deactivate log mode',
 )
+@click.option(
+    '--quiet', '-q',
+    is_flag=True,
+    help='Suppress decorative output (progress bars, panels, headers). Keeps summary lines and --output writes.',
+)
 @click.pass_context
-def cli(ctx, verbose, no_log_file):
+def cli(ctx, verbose, no_log_file, quiet):
     """
         Scan directories for build artifacts and project metadata.
 
@@ -114,8 +119,9 @@ def cli(ctx, verbose, no_log_file):
     ctx.ensure_object(dict)
     ctx.obj["logger"] = logger
     ctx.obj["console"] = console
+    ctx.obj["quiet"] = quiet
 
-    if ctx.invoked_subcommand is None:
+    if ctx.invoked_subcommand is None and not quiet:
         display_header()
 
 
@@ -173,6 +179,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     """
     logger = ctx.obj["logger"]
     console = ctx.obj["console"]
+    quiet = ctx.obj.get("quiet", False)
 
     scan_path = Path(path).resolve()
     only_types = _parse_only_filter(only)
@@ -181,7 +188,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     logger.info(f"Scanning directory: {path}")
     logger.info(f"Maximal Depth: {depth}")
 
-    if format != 'json':
+    if format != 'json' and not quiet:
         display_run_header(
             command="scan",
             path=scan_path,
@@ -194,29 +201,37 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
             },
         )
 
-    with scan_progress() as progress:
-        task = progress.add_task("[cyan]Scanning...", total=None)
-        counter = {"dirs": 0}
-
-        def update_progress(message: str):
-            counter["dirs"] += 1
-            current = message.removeprefix("Scanning ").strip()
-            tail = current[-50:] if len(current) > 50 else current
-            progress.update(
-                task,
-                description=(
-                    f"[cyan]Scanning[/cyan] "
-                    f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
-                    f"[dim]· {tail}[/dim]"
-                ),
-            )
-
+    if quiet:
         result = scan_directory(
             path=scan_path,
             max_depth=depth,
             follow_symlinks=follow_symlinks,
-            progress_callback=update_progress
+            progress_callback=None,
         )
+    else:
+        with scan_progress() as progress:
+            task = progress.add_task("[cyan]Scanning...", total=None)
+            counter = {"dirs": 0}
+
+            def update_progress(message: str):
+                counter["dirs"] += 1
+                current = message.removeprefix("Scanning ").strip()
+                tail = current[-50:] if len(current) > 50 else current
+                progress.update(
+                    task,
+                    description=(
+                        f"[cyan]Scanning[/cyan] "
+                        f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
+                        f"[dim]· {tail}[/dim]"
+                    ),
+                )
+
+            result = scan_directory(
+                path=scan_path,
+                max_depth=depth,
+                follow_symlinks=follow_symlinks,
+                progress_callback=update_progress,
+            )
 
     if only_types:
         before = len(result.projects)
@@ -249,7 +264,7 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     if format == 'json':
         from scythe.formatter.formatter import format_to_json
         console.print(format_to_json(result))
-    else:
+    elif not quiet:
         display_scan_result(
             result,
             scan_path,
@@ -261,7 +276,8 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
         output_path = Path(output)
         output_format = 'json' if output_path.suffix == '.json' else 'csv'
         save_report(result, output_path, output_format)
-        console.print(f"\n[green]✓ The report is saved: {output_path}[/green]")
+        if not quiet:
+            console.print(f"\n[green]✓ The report is saved: {output_path}[/green]")
 
 
 @cli.command()
@@ -363,49 +379,59 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     """
     logger = ctx.obj["logger"]
     console = ctx.obj["console"]
+    quiet = ctx.obj.get("quiet", False)
 
     scan_path = Path(path).resolve()
     only_types = _parse_only_filter(only)
     min_size_bytes = _parse_min_size(min_size)
 
     mode_chip = "dry-run" if dry_run else ("trash" if trash else "permanent")
-    display_run_header(
-        command="clean",
-        path=scan_path,
-        filters={
-            "mode": mode_chip,
-            "depth": depth if depth >= 0 else None,
-            "follow-symlinks": "yes" if follow_symlinks else None,
-            "only": ", ".join(t.display_name for t in only_types) if only_types else None,
-            "older-than": f"{older_than}d" if older_than and older_than > 0 else None,
-            "min-size": format_size(min_size_bytes) if min_size_bytes else None,
-            "interactive": "yes" if interactive else None,
-        },
-    )
+    if not quiet:
+        display_run_header(
+            command="clean",
+            path=scan_path,
+            filters={
+                "mode": mode_chip,
+                "depth": depth if depth >= 0 else None,
+                "follow-symlinks": "yes" if follow_symlinks else None,
+                "only": ", ".join(t.display_name for t in only_types) if only_types else None,
+                "older-than": f"{older_than}d" if older_than and older_than > 0 else None,
+                "min-size": format_size(min_size_bytes) if min_size_bytes else None,
+                "interactive": "yes" if interactive else None,
+            },
+        )
 
-    with scan_progress() as progress:
-        task = progress.add_task("[cyan]Scanning...", total=None)
-        counter = {"dirs": 0}
-
-        def update_progress(message: str) :
-            counter["dirs"] += 1
-            current = message.removeprefix("Scanning ").strip()
-            tail = current[-50:] if len(current) > 50 else current
-            progress.update(
-                task,
-                description=(
-                    f"[cyan]Scanning[/cyan] "
-                    f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
-                    f"[dim]· {tail}[/dim]"
-                ),
-            )
-
+    if quiet:
         scan_result = scan_directory(
             path=scan_path,
             max_depth=depth,
             follow_symlinks=follow_symlinks,
-            progress_callback=update_progress
+            progress_callback=None,
         )
+    else:
+        with scan_progress() as progress:
+            task = progress.add_task("[cyan]Scanning...", total=None)
+            counter = {"dirs": 0}
+
+            def update_progress(message: str):
+                counter["dirs"] += 1
+                current = message.removeprefix("Scanning ").strip()
+                tail = current[-50:] if len(current) > 50 else current
+                progress.update(
+                    task,
+                    description=(
+                        f"[cyan]Scanning[/cyan] "
+                        f"[bold]{counter['dirs']}[/bold] [dim]dirs[/dim] "
+                        f"[dim]· {tail}[/dim]"
+                    ),
+                )
+
+            scan_result = scan_directory(
+                path=scan_path,
+                max_depth=depth,
+                follow_symlinks=follow_symlinks,
+                progress_callback=update_progress,
+            )
 
     project_with_artifacts = [p for p in scan_result.projects if p.artifacts]
 
@@ -443,28 +469,31 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         )
 
     if not project_with_artifacts :
-        console.print(
-            "\n[yellow]Nothing to clean.[/yellow]"
-        )
+        if not quiet:
+            console.print(
+                "\n[yellow]Nothing to clean.[/yellow]"
+            )
         return
 
     total_artifacts = sum(len(p.artifacts) for p in project_with_artifacts)
     total_size = sum(p.total_artifact_size for p in project_with_artifacts)
 
-    display_clean_plan(
-        project_with_artifacts,
-        total_size_formatted=format_size(total_size),
-        total_artifacts=total_artifacts,
-        trash=trash,
-        dry_run=dry_run,
-    )
+    if not quiet:
+        display_clean_plan(
+            project_with_artifacts,
+            total_size_formatted=format_size(total_size),
+            total_artifacts=total_artifacts,
+            trash=trash,
+            dry_run=dry_run,
+        )
 
     if interactive:
         selected_projects = interactive_select_project(project_with_artifacts, scan_path)
         if not selected_projects :
-            console.print(
-                "[yellow]Nothing selected.[/yellow]"
-            )
+            if not quiet:
+                console.print(
+                    "[yellow]Nothing selected.[/yellow]"
+                )
             return
     else:
         selected_projects = project_with_artifacts
@@ -478,9 +507,10 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             f"{total_selected_artifacts} artifacts ({format_size(total_selected_size)}) will be deleted",
             default=False
         ) :
-            console.print(
-                "[yellow]Action canceled.[/yellow]"
-            )
+            if not quiet:
+                console.print(
+                    "[yellow]Action canceled.[/yellow]"
+                )
             return
 
     trash_mover = None
@@ -493,55 +523,64 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         )
 
     total = len(selected_projects)
-    with clean_progress() as progress:
-        task = progress.add_task("[cyan]Cleaning...", total=total)
-
-        def update_clean_progress(message: str) :
-            current = message.removeprefix("Cleaning ").strip()
-            tail = current[-40:] if len(current) > 40 else current
-            progress.update(
-                task,
-                advance=1,
-                description=(
-                    f"[cyan]Cleaning[/cyan] "
-                    f"[dim]· {tail}[/dim]"
-                ),
-            )
-
+    if quiet:
         clean_result = clean_artifacts(
             selected_projects,
             dry_run=dry_run,
-            progress_callback=update_clean_progress,
+            progress_callback=None,
             trash_mover=trash_mover,
         )
+    else:
+        with clean_progress() as progress:
+            task = progress.add_task("[cyan]Cleaning...", total=total)
+
+            def update_clean_progress(message: str):
+                current = message.removeprefix("Cleaning ").strip()
+                tail = current[-40:] if len(current) > 40 else current
+                progress.update(
+                    task,
+                    advance=1,
+                    description=(
+                        f"[cyan]Cleaning[/cyan] "
+                        f"[dim]· {tail}[/dim]"
+                    ),
+                )
+
+            clean_result = clean_artifacts(
+                selected_projects,
+                dry_run=dry_run,
+                progress_callback=update_clean_progress,
+                trash_mover=trash_mover,
+            )
 
     if trash_mover is not None:
         manifest_path = trash_mover.finalize(scan_path=scan_path)
 
-    display_clean_footer(
-        artifacts_deleted=clean_result.artifacts_deleted,
-        artifacts_total=total_artifacts,
-        space_freed_formatted=clean_result.space_freed_formatted,
-        duration=clean_result.clean_duration,
-        dry_run=dry_run,
-        trashed=trash_mover is not None,
-        skipped=len(clean_result.skipped),
-        errors=len(clean_result.errors),
-    )
-
-    if trash_mover is not None:
-        console.print(
-            f"[dim]Run id: [bold]{trash_mover.run_id}[/bold] · "
-            f"undo with [bold]scythe restore[/bold][/dim]"
+    if not quiet:
+        display_clean_footer(
+            artifacts_deleted=clean_result.artifacts_deleted,
+            artifacts_total=total_artifacts,
+            space_freed_formatted=clean_result.space_freed_formatted,
+            duration=clean_result.clean_duration,
+            dry_run=dry_run,
+            trashed=trash_mover is not None,
+            skipped=len(clean_result.skipped),
+            errors=len(clean_result.errors),
         )
 
-    if clean_result.errors:
-        console.print()
-        console.print("[bold red]Errors:[/bold red]")
-        for error in clean_result.errors[:5]:
-            console.print(f"  [red]•[/red] {error}")
-        if len(clean_result.errors) > 5:
-            console.print(f"  [dim]... and {len(clean_result.errors) - 5} more[/dim]")
+        if trash_mover is not None:
+            console.print(
+                f"[dim]Run id: [bold]{trash_mover.run_id}[/bold] · "
+                f"undo with [bold]scythe restore[/bold][/dim]"
+            )
+
+        if clean_result.errors:
+            console.print()
+            console.print("[bold red]Errors:[/bold red]")
+            for error in clean_result.errors[:5]:
+                console.print(f"  [red]•[/red] {error}")
+            if len(clean_result.errors) > 5:
+                console.print(f"  [dim]... and {len(clean_result.errors) - 5} more[/dim]")
 
     report = {
         "clean_date": datetime.now().isoformat(),
@@ -567,7 +606,8 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             write_clean_csv(report, output_path)
         else:
             write_clean_json(report, output_path)
-        console.print(f"\n[green]✓ Report saved: {output_path}[/green]")
+        if not quiet:
+            console.print(f"\n[green]✓ Report saved: {output_path}[/green]")
 
 
 @cli.command()
