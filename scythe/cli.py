@@ -551,7 +551,9 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             {
                 "path": str(p.path),
                 "type": p.project_type.value,
-                "artifacts_deleted": len(p.artifacts)
+                "artifacts_deleted": len(p.artifacts),
+                "space_freed_bytes": p.total_artifact_size,
+                "space_freed": p.total_size_formatted,
             }
             for p in clean_result.projects_cleaned
         ],
@@ -730,20 +732,23 @@ def display_header():
     console.print(Panel(header, border_style="red"))
 
 
+_CLEAN_CSV_HEADERS = [
+    "path",
+    "type",
+    "artifacts_deleted",
+    "space_freed_bytes",
+    "space_freed",
+]
+
+
 def write_clean_json(report, output_path):
     output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 
 def write_clean_csv(report, output_path):
     projects = report.get("projects", [])
-
-    if not projects:
-        output_path.write_text("")
-        return
-
-    headers = list(projects[0].keys())
-
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
+    headers = list(projects[0].keys()) if projects else _CLEAN_CSV_HEADERS
+    with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         writer.writerows(projects)
