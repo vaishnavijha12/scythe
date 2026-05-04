@@ -3,14 +3,14 @@ Command Line Interface - Implemented with Click-Rich
 """
 
 import click
+import csv
+import json
+from datetime import datetime
+from pathlib import Path
+
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from pathlib import Path
-
-import json
-from datetime import datetime
-
 from rich.table import Table
 
 from scythe import __version__
@@ -29,7 +29,6 @@ from scythe.ui.ui import (
     interactive_select_project,
     confirm_action,
 )
-
 from scythe.formatter.formatter import save_report
 from scythe.utils.utils import format_size, parse_size_threshold
 
@@ -61,6 +60,7 @@ def _parse_min_size(value):
 
 
 console = Console()
+
 
 @click.group()
 @click.version_option(version=__version__, prog_name="SCYTHE")
@@ -109,47 +109,42 @@ def cli(ctx, verbose, no_log_file):
     """
     import logging
     log_level = logging.DEBUG if verbose else logging.INFO
-    logger = setup_logger(name="scythe",level=log_level, log_file=not no_log_file)
+    logger = setup_logger(name="scythe", level=log_level, log_file=not no_log_file)
 
     ctx.ensure_object(dict)
     ctx.obj["logger"] = logger
     ctx.obj["console"] = console
 
     if ctx.invoked_subcommand is None:
-       display_header()
+        display_header()
+
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True), default='.')
 @click.option(
-    '--depth',
-    '-d',
+    '--depth', '-d',
     type=int,
     default=-1,
     help="Depth of recursion",
     show_default=True,
 )
-
 @click.option(
     '--follow-symlinks',
     is_flag=True,
     help="Follow symbolics links"
 )
-
 @click.option(
     '--format',
     type=click.Choice(['table', 'tree', 'compact', 'json']),
     default='table',
     help='Format the output of the result'
 )
-
 @click.option(
     '--output', '-o',
     type=click.Path(),
     help='Save the report of the result in a file'
 )
-
 @click.option('--no-artifacts', is_flag=True, help='Disable artifacts details output')
-
 @click.option(
     '--only',
     type=str,
@@ -157,7 +152,6 @@ def cli(ctx, verbose, no_log_file):
     metavar='TYPES',
     help='Comma-separated list of project types to keep (e.g. node,python,rust)'
 )
-
 @click.option(
     '--older-than',
     type=int,
@@ -172,7 +166,6 @@ def cli(ctx, verbose, no_log_file):
     metavar='SIZE',
     help='Only keep artifacts at or above SIZE (e.g. 100MB, 1GB, 512KB)'
 )
-
 @click.pass_context
 def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, older_than, min_size):
     """
@@ -243,7 +236,6 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
 
     if min_size_bytes:
         from scythe.utils.utils import filter_projects_by_artifact_size
-
         before_projects = len(result.projects)
         before_artifacts = sum(len(project.artifacts) for project in result.projects)
         result.projects = filter_projects_by_artifact_size(result.projects, min_size_bytes)
@@ -254,10 +246,8 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
             f"{len(result.projects)}/{before_projects} projects"
         )
 
-
     if format == 'json':
         from scythe.formatter.formatter import format_to_json
-
         console.print(format_to_json(result))
     else:
         display_scan_result(
@@ -267,13 +257,11 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
             format=format
         )
 
-        # Save the report if needed
     if output:
         output_path = Path(output)
         output_format = 'json' if output_path.suffix == '.json' else 'csv'
         save_report(result, output_path, output_format)
         console.print(f"\n[green]✓ The report is saved: {output_path}[/green]")
-
 
 
 @cli.command()
@@ -288,7 +276,6 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     is_flag=True,
     help="Dry run, without saving results",
 )
-
 @click.option(
     '--depth', '-d',
     type=int,
@@ -297,20 +284,17 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     help="Maximal depth of scan",
     show_default=True
 )
-
 @click.option(
     '--force', '-f',
     is_flag=True,
     help="Force clean without confirmation"
 )
-
 @click.option(
     '--output', '-o',
     type=click.Path(),
     metavar='FILE',
     help='Save the report of the clean result in a file'
 )
-
 @click.option(
     '--only',
     type=str,
@@ -318,7 +302,6 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     metavar='TYPES',
     help='Comma-separated list of project types to clean (e.g. node,python,rust)'
 )
-
 @click.option(
     '--older-than',
     type=int,
@@ -333,19 +316,16 @@ def scan(ctx, path, depth, follow_symlinks, format, output, no_artifacts, only, 
     metavar='SIZE',
     help='Only clean artifacts at or above SIZE (e.g. 100MB, 1GB, 512KB)'
 )
-
 @click.option(
     '--trash',
     is_flag=True,
     help='Move artifacts to scythe\'s recoverable trash instead of deleting them. Use `scythe restore` to undo.'
 )
-
 @click.option(
     '--follow-symlinks',
     is_flag=True,
     help="Follow symbolic links during scan"
 )
-
 @click.pass_context
 def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_than, min_size, trash, follow_symlinks):
     """
@@ -450,7 +430,6 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     if min_size_bytes:
         from scythe.utils.utils import filter_projects_by_artifact_size
-
         before_projects = len(project_with_artifacts)
         before_artifacts = sum(len(project.artifacts) for project in project_with_artifacts)
         project_with_artifacts = filter_projects_by_artifact_size(
@@ -480,17 +459,17 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         dry_run=dry_run,
     )
 
-    if interactive :
+    if interactive:
         selected_projects = interactive_select_project(project_with_artifacts, scan_path)
         if not selected_projects :
             console.print(
                 "[yellow]Nothing selected.[/yellow]"
             )
             return
-    else :
+    else:
         selected_projects = project_with_artifacts
 
-    if not force and not dry_run :
+    if not force and not dry_run:
         total_selected_size = sum(p.total_artifact_size for p in selected_projects)
         total_selected_artifacts = sum(len(p.artifacts) for p in selected_projects)
 
@@ -508,7 +487,6 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
     manifest_path = None
     if trash and not dry_run:
         from scythe.trash import TrashMover
-
         trash_mover = TrashMover()
         logger.info(
             f"Trash mode active — artifacts will be moved under {trash_mover.trash_dir}"
@@ -562,7 +540,6 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
         console.print("[bold red]Errors:[/bold red]")
         for error in clean_result.errors[:5]:
             console.print(f"  [red]•[/red] {error}")
-
         if len(clean_result.errors) > 5:
             console.print(f"  [dim]... and {len(clean_result.errors) - 5} more[/dim]")
 
@@ -574,7 +551,9 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
             {
                 "path": str(p.path),
                 "type": p.project_type.value,
-                "artifacts_deleted": len(p.artifacts)
+                "artifacts_deleted": len(p.artifacts),
+                "space_freed_bytes": p.total_artifact_size,
+                "space_freed": p.total_size_formatted,
             }
             for p in clean_result.projects_cleaned
         ],
@@ -584,7 +563,10 @@ def clean(ctx, path, interactive, dry_run, depth, force, output, only, older_tha
 
     if output:
         output_path = Path(output)
-        output_path.write_text(json.dumps(report, indent=2), encoding='utf-8')
+        if output_path.suffix == ".csv":
+            write_clean_csv(report, output_path)
+        else:
+            write_clean_json(report, output_path)
         console.print(f"\n[green]✓ Report saved: {output_path}[/green]")
 
 
@@ -740,13 +722,37 @@ def info(ctx):
     from scythe.banner.banner import VERSION, display_banner
     display_banner()
     console.print(Panel(info_text, title="Guide", border_style="cyan"))
+
+
 def display_header():
     header = """
     [bold red]SCYTHE[/bold red]
     [yellow]Reclaim disk space in seconds.[/yellow]
     """
-
     console.print(Panel(header, border_style="red"))
 
-if "__main__" == __name__:
+
+_CLEAN_CSV_HEADERS = [
+    "path",
+    "type",
+    "artifacts_deleted",
+    "space_freed_bytes",
+    "space_freed",
+]
+
+
+def write_clean_json(report, output_path):
+    output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
+def write_clean_csv(report, output_path):
+    projects = report.get("projects", [])
+    headers = list(projects[0].keys()) if projects else _CLEAN_CSV_HEADERS
+    with output_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(projects)
+
+
+if __name__ == "__main__":
     cli()

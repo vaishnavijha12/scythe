@@ -252,6 +252,81 @@ def test_restore_unknown_run_id_exits_nonzero(monkeypatch, tmp_path):
     assert "No run with id" in invoke.output
 
 
+def test_clean_csv_suffix_writes_csv(monkeypatch, tmp_path):
+    """Regression for #6: clean -o report.csv must write CSV, not JSON."""
+    project = _project_with_small_and_large_artifacts(tmp_path)
+    # The cleaner skips artifacts whose path doesn't exist; materialize them.
+    for artifact in project.artifacts:
+        artifact.path.mkdir(parents=True, exist_ok=True)
+    scan_result = ScanResult(root_path=tmp_path, projects=[project])
+
+    monkeypatch.setattr(cli_module, "progress_bar", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "scan_progress", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "clean_progress", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-csv"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    report_path = tmp_path / "run.csv"
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        [
+            "--no-log-file",
+            "clean", str(tmp_path),
+            "--dry-run", "--force",
+            "-o", str(report_path),
+        ],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+    assert report_path.exists()
+
+    content = report_path.read_text(encoding="utf-8")
+    first_line = content.splitlines()[0]
+    assert "path" in first_line
+    assert "type" in first_line
+    assert "space_freed_bytes" in first_line
+    # Not an opening brace, which would indicate JSON.
+    assert not content.lstrip().startswith("{")
+
+
+def test_clean_json_suffix_writes_json(monkeypatch, tmp_path):
+    """The .json suffix still routes to the JSON writer with the enriched schema."""
+    project = _project_with_small_and_large_artifacts(tmp_path)
+    for artifact in project.artifacts:
+        artifact.path.mkdir(parents=True, exist_ok=True)
+    scan_result = ScanResult(root_path=tmp_path, projects=[project])
+
+    monkeypatch.setattr(cli_module, "progress_bar", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "scan_progress", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "clean_progress", _fake_progress_bar)
+    monkeypatch.setattr(cli_module, "setup_logger", lambda **_kwargs: logging.getLogger("test-json"))
+    monkeypatch.setattr(cli_module, "scan_directory", lambda **_kwargs: scan_result)
+
+    report_path = tmp_path / "run.json"
+    runner = CliRunner()
+    invoke = runner.invoke(
+        cli_module.cli,
+        [
+            "--no-log-file",
+            "clean", str(tmp_path),
+            "--dry-run", "--force",
+            "-o", str(report_path),
+        ],
+        catch_exceptions=False,
+    )
+
+    assert invoke.exit_code == 0, invoke.output
+    assert report_path.exists()
+
+    import json as _json
+    payload = _json.loads(report_path.read_text(encoding="utf-8"))
+    assert "summary" in payload
+    assert "projects" in payload
+    assert payload["projects"][0]["space_freed_bytes"] == 2 * 1024 * 1024 + 512
+
+
 def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
     """--dry-run + --trash should NOT create a trash dir or manifest."""
     project_dir = tmp_path / "demo"
