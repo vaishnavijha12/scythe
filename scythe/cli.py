@@ -1,7 +1,7 @@
 """
 Command Line Interface - Implemented with Click-Rich
 """
-
+import os
 import click
 import csv
 import json
@@ -59,7 +59,6 @@ def _parse_min_size(value):
         raise click.BadParameter(str(exc), param_hint='--min-size')
 
 
-console = Console()
 
 
 @click.group()
@@ -79,8 +78,13 @@ console = Console()
     is_flag=True,
     help='Suppress decorative output (progress bars, panels, headers). Keeps summary lines and --output writes.',
 )
+@click.option(
+    '--no-color',
+    is_flag=True,
+    help='Disable ANSI colored output.',
+)
 @click.pass_context
-def cli(ctx, verbose, no_log_file, quiet):
+def cli(ctx, verbose, no_log_file, quiet, no_color):
     """
         Scan directories for build artifacts and project metadata.
 
@@ -117,12 +121,17 @@ def cli(ctx, verbose, no_log_file, quiet):
     logger = setup_logger(name="scythe", level=log_level, log_file=not no_log_file)
 
     ctx.ensure_object(dict)
+    
+    env_no_color = os.environ.get("NO_COLOR") not in (None, "")
+    disable_color = no_color or env_no_color
+
+    console = Console(no_color=disable_color)
     ctx.obj["logger"] = logger
     ctx.obj["console"] = console
     ctx.obj["quiet"] = quiet
 
     if ctx.invoked_subcommand is None and not quiet:
-        display_header()
+        display_header(console)
 
 
 @cli.command()
@@ -764,7 +773,7 @@ def info(ctx):
     console.print(Panel(info_text, title="Guide", border_style="cyan"))
 
 
-def display_header():
+def display_header(console):
     header = """
     [bold red]SCYTHE[/bold red]
     [yellow]Reclaim disk space in seconds.[/yellow]

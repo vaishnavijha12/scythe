@@ -451,3 +451,65 @@ def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
     assert invoke.exit_code == 0
     assert artifact_dir.exists()  # still here
     assert not trash_root.exists()
+
+
+def test_no_color_flag(monkeypatch, tmp_path):
+    """--no-color disables ANSI colored output."""
+    scan_result = ScanResult(
+        root_path=tmp_path,
+        projects=[],
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "setup_logger",
+        lambda **_kwargs: logging.getLogger("test-no-color-flag"),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "scan_directory",
+        lambda **_kwargs: scan_result,
+    )
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "--no-color", "scan", str(tmp_path)],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "\x1b[" not in result.output
+
+
+def test_no_color_env(monkeypatch, tmp_path):
+    """NO_COLOR env var disables ANSI colored output."""
+    scan_result = ScanResult(
+        root_path=tmp_path,
+        projects=[],
+    )
+
+    monkeypatch.setenv("NO_COLOR", "1")
+
+    monkeypatch.setattr(
+        cli_module,
+        "setup_logger",
+        lambda **_kwargs: logging.getLogger("test-no-color-env"),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "scan_directory",
+        lambda **_kwargs: scan_result,
+    )
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli_module.cli,
+        ["--no-log-file", "scan", str(tmp_path)],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "\x1b[" not in result.output
