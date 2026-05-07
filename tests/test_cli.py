@@ -378,7 +378,7 @@ def test_quiet_scan_still_writes_output_file(monkeypatch, tmp_path):
     assert "report is saved" not in invoke.output.lower()
 
 
-    def test_quiet_clean_suppresses_decorative_output(monkeypatch, tmp_path):
+def test_quiet_clean_suppresses_decorative_output(monkeypatch, tmp_path):
     """--quiet on clean drops headers, plan, footer; --output still works."""
     project = _project_with_small_and_large_artifacts(tmp_path)
     for artifact in project.artifacts:
@@ -414,7 +414,7 @@ def test_quiet_scan_still_writes_output_file(monkeypatch, tmp_path):
     assert report_path.exists()
 
 
-    def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
+def test_clean_dry_run_skips_trash_setup(monkeypatch, tmp_path):
     """--dry-run + --trash should NOT create a trash dir or manifest."""
     project_dir = tmp_path / "demo"
     artifact_dir = project_dir / "node_modules"
@@ -451,7 +451,9 @@ def test_quiet_scan_still_writes_output_file(monkeypatch, tmp_path):
     assert invoke.exit_code == 0
     assert artifact_dir.exists()  # still here
     assert not trash_root.exists()
-    def test_no_color_flag(monkeypatch, tmp_path):
+
+
+def test_no_color_flag(monkeypatch, tmp_path):
     """--no-color disables ANSI colored output."""
     scan_result = ScanResult(
         root_path=tmp_path,
@@ -481,7 +483,7 @@ def test_quiet_scan_still_writes_output_file(monkeypatch, tmp_path):
     assert "\x1b[" not in result.output
 
 
-    def test_no_color_env(monkeypatch, tmp_path):
+def test_no_color_env(monkeypatch, tmp_path):
     """NO_COLOR env var disables ANSI colored output."""
     scan_result = ScanResult(
         root_path=tmp_path,
