@@ -1,7 +1,7 @@
 """
 Command Line Interface - Implemented with Click-Rich
 """
-
+import os
 import click
 import csv
 import json
@@ -59,7 +59,6 @@ def _parse_min_size(value):
         raise click.BadParameter(str(exc), param_hint='--min-size')
 
 
-console = Console()
 
 
 @click.group()
@@ -79,8 +78,13 @@ console = Console()
     is_flag=True,
     help='Suppress decorative output (progress bars, panels, headers). Keeps summary lines and --output writes.',
 )
+@click.option(
+    '--no-color',
+    is_flag=True,
+    help='Disable ANSI colored output.',
+)
 @click.pass_context
-def cli(ctx, verbose, no_log_file, quiet):
+def cli(ctx, verbose, no_log_file, quiet, no_color):
     """
         Scan directories for build artifacts and project metadata.
 
