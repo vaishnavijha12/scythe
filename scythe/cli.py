@@ -121,12 +121,17 @@ def cli(ctx, verbose, no_log_file, quiet, no_color):
     logger = setup_logger(name="scythe", level=log_level, log_file=not no_log_file)
 
     ctx.ensure_object(dict)
+    
+    env_no_color = os.environ.get("NO_COLOR") not in (None, "")
+    disable_color = no_color or env_no_color
+
+    console = Console(no_color=disable_color)
     ctx.obj["logger"] = logger
     ctx.obj["console"] = console
     ctx.obj["quiet"] = quiet
 
     if ctx.invoked_subcommand is None and not quiet:
-        display_header()
+        display_header(console)
 
 
 @cli.command()
@@ -768,7 +773,7 @@ def info(ctx):
     console.print(Panel(info_text, title="Guide", border_style="cyan"))
 
 
-def display_header():
+def display_header(console):
     header = """
     [bold red]SCYTHE[/bold red]
     [yellow]Reclaim disk space in seconds.[/yellow]
