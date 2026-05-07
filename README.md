@@ -174,6 +174,29 @@ rather than failing.
 Prints the installed version and the list of supported ecosystems and
 patterns.
 
+## Output
+
+By default, `scythe` uses Rich ANSI-colored output for better readability.
+
+Disable colored output using either the standard `NO_COLOR`
+environment variable:
+
+```bash
+NO_COLOR=1 scythe scan ~/projects
+```
+
+or the top-level `--no-color` flag:
+
+```bash
+scythe --no-color scan ~/projects
+```
+
+This is useful for:
+- screen readers
+- CI logs
+- terminals without ANSI support
+- piping output to files or other tools
+
 ## Supported ecosystems
 
 | Ecosystem      | Marker files                                                              | Artifact patterns                                                                                              |
